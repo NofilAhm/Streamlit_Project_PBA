@@ -5,6 +5,7 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
+import altair as alt # 💡 NEW: Import Altair for charting
 
 # Set the page configuration to wide layout
 st.set_page_config(layout="wide") 
@@ -56,11 +57,10 @@ FOODPANDA_THEME = """
 
 /* 🚨 FINAL FIX: Increase size and bold the KPI metric labels (Targets the label element) */
 [data-testid="stMetricLabel"] {
-    font-size: 1.35rem !important; /* Forces a larger size */
+    font-size: 1.35rem !important; 
     font-weight: bold !important; 
-    color: #333333 !important; /* Dark text for visibility on the white dashboard background */
+    color: #333333 !important; 
 }
-/* Targets the inner div holding the label text as a secondary measure */
 [data-testid="stMetricLabel"] div {
     font-size: 1.35rem !important; 
     font-weight: bold !important; 
@@ -71,7 +71,7 @@ FOODPANDA_THEME = """
 st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
 
 # -------------------------
-# Hardcoded users & Session State
+# Hardcoded users & Session State (UNCHANGED)
 # -------------------------
 USERS = {
     "nofil": "12345",
@@ -84,7 +84,7 @@ if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 # -------------------------
-# Login function
+# Login function (UNCHANGED)
 # -------------------------
 def login():
     col1, col2, col3 = st.columns([1, 1, 1]) 
@@ -110,38 +110,33 @@ def login():
                     st.error("Invalid username or password")
                     
 # -------------------------
-# Data Loading and Preparation Function (ROBUST & CLEANED)
+# Data Loading and Preparation Function (UNCHANGED)
 # -------------------------
 @st.cache_data
 def load_data():
     """Loads, cleans, and engineers features for the sales dashboard."""
     
-    # Assumes file is named EXACTLY 'dataset' and is in the same folder.
     DATA_FILE = Path(__file__).parent / "dataset" 
 
     try:
         df = pd.read_csv(DATA_FILE)
         
         # --- DATA CLEANING & FEATURE ENGINEERING ---
-        
-        # 1. Date Conversions
         DATE_COLUMNS = ['signup_date', 'order_date', 'last_order_date', 'rating_date']
         for col in DATE_COLUMNS:
             df[col] = pd.to_datetime(df[col], errors='coerce')
             
-        # 2. Ensure Price and Quantity are numeric
         df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
             
-        # 3. Calculate Sales (Revenue per item)
         df['sales'] = df['quantity'] * df['price']
         
-        # 4. Create Time-Based Features for Charts
-        df['Order_Day'] = df['order_date'].dt.normalize() # Day only (no time component)
+        # NOTE: Using 'Order_Day' for the line chart requires a continuous time axis
+        df['Order_Day'] = df['order_date'].dt.normalize()
+        # Using 'Order_Month' for month-level aggregation
         df['Order_Month'] = df['order_date'].dt.to_period('M').astype(str)
         df['DayOfWeek'] = df['order_date'].dt.day_name()
         
-        # 5. Drop rows where essential data is missing
         df.dropna(subset=['order_id', 'order_date', 'sales'], inplace=True)
         
         return df
@@ -151,7 +146,7 @@ def load_data():
         return pd.DataFrame() 
 
 # -------------------------
-# Dashboard function
+# Dashboard function (CHART ADDED)
 # -------------------------
 def main_dashboard():
     # Reset background theme for the main dashboard content area
@@ -184,14 +179,13 @@ def main_dashboard():
         return
 
     # ------------------------------------
-    # KPI Implementation
+    # KPI Implementation (UNCHANGED)
     # ------------------------------------
     ORDER_COL = 'order_id' 
     PRICE_COL = 'sales'
 
     if ORDER_COL in df.columns and PRICE_COL in df.columns:
         
-        # Calculate metrics
         total_revenue = df[PRICE_COL].sum()
         total_orders = df[ORDER_COL].nunique()
         average_order_value = total_revenue / total_orders if total_orders else 0
@@ -201,36 +195,46 @@ def main_dashboard():
         kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
         
         with kpi_col1:
-            # The label here will be styled by the new CSS rule
-            st.metric(
-                label="💰 Total Revenue", 
-                value=f"${total_revenue:,.2f}"
-            )
-        
+            st.metric(label="💰 Total Revenue", value=f"${total_revenue:,.2f}")
         with kpi_col2:
-            st.metric(
-                label="📦 Total Orders", 
-                value=f"{total_orders:,}"
-            )
-
+            st.metric(label="📦 Total Orders", value=f"{total_orders:,}")
         with kpi_col3:
-            st.metric(
-                label="💸 Average Order Value (AOV)", 
-                value=f"${average_order_value:,.2f}"
-            )
+            st.metric(label="💸 Average Order Value (AOV)", value=f"${average_order_value:,.2f}")
         
         st.write("---")
     
-    else:
-        st.warning(f"Required columns ('{ORDER_COL}' or '{PRICE_COL}') not found after data loading. Check your file.")
+    # ------------------------------------
+    # 💡 NEW: MONTH-WISE SALES CHART
+    # ------------------------------------
+    if 'Order_Month' in df.columns and PRICE_COL in df.columns:
+        st.subheader("Monthly Revenue Trend")
         
+        # 1. Group the data by month and sum the sales
+        monthly_sales = df.groupby('Order_Month')[PRICE_COL].sum().reset_index()
+        monthly_sales.columns = ['Month', 'Total Sales']
+
+        # 2. Create the Altair Line Chart
+        chart = alt.Chart(monthly_sales).mark_line(point=True, color='#D70F64').encode(
+            # Sort the month axis correctly using the Month period string
+            x=alt.X('Month:N', sort=None, axis=alt.Axis(title='Month')),
+            y=alt.Y('Total Sales:Q', axis=alt.Axis(title='Total Revenue ($)')),
+            tooltip=['Month', alt.Tooltip('Total Sales', format='$,.2f')]
+        ).properties(
+            title='Monthly Revenue Over Time'
+        ).interactive() # Allow zoom/pan
+        
+        st.altair_chart(chart, use_container_width=True)
+        st.write("---")
+    else:
+        st.warning("Cannot generate monthly sales chart. Check 'Order_Month' and 'sales' columns.")
+
     # Display raw data preview 
     st.subheader("Raw Data Preview")
     st.write(f"Rows: **{df.shape[0]}**, Columns: **{df.shape[1]}**")
     st.dataframe(df.head(), use_container_width=True)
 
 # -------------------------
-# App routing
+# App routing and Run App (UNCHANGED)
 # -------------------------
 def main():
     if not st.session_state.get("logged_in", False):
@@ -238,8 +242,5 @@ def main():
     else:
         main_dashboard()
 
-# -------------------------
-# Run app
-# -------------------------
 if __name__ == "__main__":
     main()
