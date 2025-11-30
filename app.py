@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:import streamlit as st
+# In[1]:
 import streamlit as st
 import pandas as pd
 from pathlib import Path
@@ -11,19 +11,21 @@ import altair as alt
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Styling and Readability
+# Custom CSS for Styling and Readability (UPDATED)
 # -------------------------
 FOODPANDA_THEME = """
 <style>
 /* 1. MAIN BACKGROUND: Transparent Foodpanda Pink */
 [data-testid="stAppViewContainer"] {
     background-color: rgba(215, 15, 100, 0.8) !important; 
-    color: white !important; 
+    /* 🚨 FIX: Change text color on the pink background to the brand pink */
+    color: #D70F64 !important; 
 }
 
-/* 2. PUSH CONTENT DOWN (1.5 inches) */
+/* 2. PUSH CONTENT DOWN (Top Space Reduction) */
 [data-testid="stApp"] {
-    padding-top: 80px; 
+    /* 🚨 FIX: Reduced padding from 80px to 20px (approx 2 inch reduction) */
+    padding-top: 20px !important; 
 }
 
 /* 3. INPUT FIELD STYLING: FIXING READABILITY (White Box, Black Text) */
@@ -38,9 +40,9 @@ FOODPANDA_THEME = """
     border: none !important; 
 }
 
-/* 4. Ensure input labels and titles are visible (White text on pink background) */
+/* 4. Ensure input labels and titles are visible (Set to brand pink on pink background) */
 .stTextInput > label, h1, h2, h3, h4, .stMarkdown {
-    color: white !important;
+    color: #D70F64 !important; /* 🚨 FIX: Set to brand pink for visibility */
 }
 
 /* 5. General Button Styling */
@@ -71,7 +73,7 @@ FOODPANDA_THEME = """
 st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
 
 # -------------------------
-# Hardcoded users & Session State
+# Hardcoded users & Session State (UNCHANGED)
 # -------------------------
 USERS = {
     "nofil": "12345",
@@ -84,7 +86,7 @@ if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 # -------------------------
-# Login function
+# Login function (UNCHANGED)
 # -------------------------
 def login():
     col1, col2, col3 = st.columns([1, 1, 1]) 
@@ -110,13 +112,12 @@ def login():
                     st.error("Invalid username or password")
                     
 # -------------------------
-# Data Loading and Preparation Function (ROBUST & CLEANED)
+# Data Loading and Preparation Function (UNCHANGED)
 # -------------------------
 @st.cache_data
 def load_data():
     """Loads, cleans, and engineers features for the sales dashboard."""
     
-    # Assumes file is named EXACTLY 'dataset' and is in the same folder.
     DATA_FILE = Path(__file__).parent / "dataset" 
 
     try:
@@ -150,7 +151,7 @@ def load_data():
         return pd.DataFrame() 
 
 # -------------------------
-# Dashboard function
+# Dashboard function (UNCHANGED logic)
 # -------------------------
 def main_dashboard():
     # Reset background theme for the main dashboard content area
@@ -194,7 +195,7 @@ def main_dashboard():
         total_orders = df[ORDER_COL].nunique()
         average_order_value = total_revenue / total_orders if total_orders else 0
         
-        # 💡 ADDED SECTION HEADING
+        # ADDED SECTION HEADING
         st.header("Sales Overview")
         st.subheader("Key Performance Indicators (KPIs) for All Time")
         
@@ -248,7 +249,7 @@ def main_dashboard():
     st.dataframe(df.head(), use_container_width=True)
 
 # -------------------------
-# App routing
+# App routing (UNCHANGED)
 # -------------------------
 def main():
     if not st.session_state.get("logged_in", False):
@@ -257,7 +258,7 @@ def main():
         main_dashboard()
 
 # -------------------------
-# Run app
+# Run app (UNCHANGED)
 # -------------------------
 if __name__ == "__main__":
     main()
