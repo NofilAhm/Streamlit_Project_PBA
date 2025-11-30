@@ -11,20 +11,25 @@ st.set_page_config(layout="wide")
 # -------------------------
 # Custom CSS for Foodpanda Theme
 # -------------------------
-# Set the background color to a Foodpanda-like magenta/pink
-# We target the main block and the sidebar block.
+# The background color is now RGBA: rgb(215, 15, 100) with 80% opacity (0.8 alpha)
 FOODPANDA_THEME = """
 <style>
 /* Change the primary background color */
 .stApp {
-    background-color: #D70F64; /* A vibrant magenta/pink */
-    color: white; /* Ensure text is readable against the dark background */
+    background-color: rgba(215, 15, 100, 0.8); /* Foodpanda Pink (80% opacity) */
+    color: white; /* Ensure general text is white */
 }
 
-/* Style the login box container (if we use a container/form) */
-/* This targets the container holding the login elements for better contrast */
-.stTextInput > div > div > input, .stButton > button, .stMarkdown {
-    color: #444444; /* Dark text for inputs/buttons */
+/* 💡 CHANGE 1: Make input text white (Targets the actual input field) */
+.stTextInput > div > div > input {
+    color: white !important; 
+    background-color: rgba(255, 255, 255, 0.1); /* Slightly transparent background for fields */
+    border: 1px solid white; 
+}
+
+/* Style for the labels and general markdown text */
+.stMarkdown {
+    color: white !important; 
 }
 
 /* Style the buttons */
@@ -46,7 +51,7 @@ st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
 
 
 # -------------------------
-# Hardcoded users
+# Hardcoded users (UNCHANGED)
 # -------------------------
 USERS = {
     "nofil": "12345",
@@ -54,7 +59,7 @@ USERS = {
 }
 
 # -------------------------
-# Initialize session state (Keep this at the top for first run setup)
+# Initialize session state (UNCHANGED)
 # -------------------------
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
@@ -62,11 +67,10 @@ if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 # -------------------------
-# Login function
+# Login function (SLIGHTLY MODIFIED INPUT STYLING)
 # -------------------------
 def login():
     # Use empty space and columns to center the login block and push it down
-    # The 'st.empty()' call below acts as the 1.5-inch vertical space
     st.empty() # Top vertical space
     st.empty() 
     
@@ -74,20 +78,15 @@ def login():
     col1, col2, col3 = st.columns([1, 1, 1]) 
     
     with col2:
-        # 1. Add the small Foodpanda logo image (replace URL with your actual image/path)
-        # Placeholder image URL for demonstration. In a real project, use a local file path 
-        # (e.g., 'foodpanda_logo.png') and upload it to your GitHub repo.
+        # Placeholder image URL 
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Foodpanda_logo.svg/320px-Foodpanda_logo.svg.png", 
-                 width=100) # Adjusted for a small logo
+                 width=100) 
 
-        st.markdown("<h2 style='text-align: center; color: white;'>Dashboard Login</h2>", unsafe_allow_html=True)
+        # Title is now white thanks to global CSS
+        st.markdown("<h2 style='text-align: center;'>Dashboard Login</h2>", unsafe_allow_html=True)
         
-        # We will use st.container to make the login box visually separate
-        with st.container(border=True): # Use border for a distinct box
-            # We use an alternative background color for the container 
-            # by styling the inputs and title inside it to keep it legible.
-
-            # Input fields inside the container
+        with st.container(border=True): 
+            # Input fields are here - text color is controlled by CSS above
             username = st.text_input("Username", key="login_user")
             password = st.text_input("Password", type="password", key="login_pass")
 
@@ -101,26 +100,19 @@ def login():
                 else:
                     st.error("Invalid username or password")
                     
-    # The login page is complete within col2
-    
-
 # -------------------------
-# Dashboard function
+# Dashboard function (UNCHANGED)
 # -------------------------
 def main_dashboard():
-    # We must reset the background style for the dashboard content, 
-    # otherwise it will inherit the Foodpanda pink background.
+    # Reset the background style for the dashboard content
     st.markdown("""
         <style>
         .stApp {
-            background-color: white; /* Set background back to white for dashboard */
+            background-color: white; /* Set dashboard background back to solid white */
             color: #333333;
         }
         </style>
         """, unsafe_allow_html=True)
-    
-    # The sidebar will retain the original pink background due to the initial CSS, 
-    # but the main canvas is set to white here for better data visualization contrast.
     
     st.sidebar.title("Dashboard Menu")
     st.sidebar.write(f"Welcome, **{st.session_state['username']}**")
@@ -134,7 +126,7 @@ def main_dashboard():
     # Add your data visualization code here
 
 # -------------------------
-# App routing 
+# App routing (UNCHANGED)
 # -------------------------
 def main():
     if not st.session_state.get("logged_in", False):
@@ -143,7 +135,7 @@ def main():
         main_dashboard()
 
 # -------------------------
-# Run app
+# Run app (UNCHANGED)
 # -------------------------
 if __name__ == "__main__":
     main()
