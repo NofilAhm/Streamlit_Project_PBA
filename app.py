@@ -10,7 +10,7 @@ from pathlib import Path
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Reliable Styling and Readability
+# Custom CSS for Reliable Styling and Readability (FINAL FIX)
 # -------------------------
 FOODPANDA_THEME = """
 <style>
@@ -25,22 +25,19 @@ FOODPANDA_THEME = """
     padding-top: 80px; 
 }
 
-/* 3. INPUT FIELD STYLING: FIXING READABILITY */
-/* Target the immediate container around the input for a light background */
+/* 3. INPUT FIELD STYLING: FIXING READABILITY (White Box, Black Text) */
 .stTextInput > div:first-child {
-    background-color: white !important; /* Solid white background for clear readability */
+    background-color: white !important; 
     border-radius: 0.25rem; 
     padding: 0.5rem; 
 }
-
-/* Targets the actual input element: Black text over white background */
 .stTextInput > div > div > input {
     color: black !important; 
     background-color: transparent !important; 
     border: none !important; 
 }
 
-/* 4. Ensure input labels and titles are visible */
+/* 4. Ensure input labels and titles are visible (White text on pink background) */
 .stTextInput > label, h1, h2, h3, h4, .stMarkdown {
     color: white !important;
 }
@@ -57,18 +54,24 @@ FOODPANDA_THEME = """
     color: white !important; 
 }
 
-/* 🚨 NEW FIX: Increase size and bold the KPI metric labels */
-[data-testid="stMetricLabel"] > div {
-    font-size: 1.25rem; /* Makes the font about 25% larger */
-    font-weight: bold; /* Makes the title bold */
-    color: #444444 !important; /* Optionally make it darker grey for better visibility on white dashboard */
+/* 🚨 FINAL FIX: Increase size and bold the KPI metric labels (Targets the label element) */
+[data-testid="stMetricLabel"] {
+    font-size: 1.35rem !important; /* Forces a larger size */
+    font-weight: bold !important; 
+    color: #333333 !important; /* Dark text for visibility on the white dashboard background */
+}
+/* Targets the inner div holding the label text as a secondary measure */
+[data-testid="stMetricLabel"] div {
+    font-size: 1.35rem !important; 
+    font-weight: bold !important; 
+    color: #333333 !important; 
 }
 </style>
 """
 st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
 
 # -------------------------
-# Hardcoded users & Session State (UNCHANGED)
+# Hardcoded users & Session State
 # -------------------------
 USERS = {
     "nofil": "12345",
@@ -80,10 +83,34 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state["username"] = ""
 
-# ... (login function remains here) ...
-
 # -------------------------
-# Data Loading and Preparation Function (UNCHANGED)
+# Login function
+# -------------------------
+def login():
+    col1, col2, col3 = st.columns([1, 1, 1]) 
+    
+    with col2:
+        st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Foodpanda_logo.svg/320px-Foodpanda_logo.svg.png", 
+                 width=100) 
+
+        st.markdown("<h2 style='text-align: center;'>Dashboard Login</h2>", unsafe_allow_html=True)
+        
+        with st.container(border=True): 
+            username = st.text_input("Username", key="login_user")
+            password = st.text_input("Password", type="password", key="login_pass")
+
+            if st.button("Login", use_container_width=True):
+                if username in USERS and USERS[username] == password:
+                    st.session_state["logged_in"] = True
+                    st.session_state["username"] = username
+                    st.success("Logged in successfully! Redirecting...")
+                    st.rerun()
+                    return 
+                else:
+                    st.error("Invalid username or password")
+                    
+# -------------------------
+# Data Loading and Preparation Function (ROBUST & CLEANED)
 # -------------------------
 @st.cache_data
 def load_data():
@@ -93,7 +120,6 @@ def load_data():
     DATA_FILE = Path(__file__).parent / "dataset" 
 
     try:
-        # Read the file assuming it's a CSV format
         df = pd.read_csv(DATA_FILE)
         
         # --- DATA CLEANING & FEATURE ENGINEERING ---
@@ -125,7 +151,7 @@ def load_data():
         return pd.DataFrame() 
 
 # -------------------------
-# Dashboard function (KPIs UNCHANGED, BUT STYLE IS NOW BIGGER/BOLDER)
+# Dashboard function
 # -------------------------
 def main_dashboard():
     # Reset background theme for the main dashboard content area
@@ -161,7 +187,7 @@ def main_dashboard():
     # KPI Implementation
     # ------------------------------------
     ORDER_COL = 'order_id' 
-    PRICE_COL = 'sales'     # Using the calculated 'sales' column
+    PRICE_COL = 'sales'
 
     if ORDER_COL in df.columns and PRICE_COL in df.columns:
         
@@ -175,7 +201,7 @@ def main_dashboard():
         kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
         
         with kpi_col1:
-            # The label here will now be styled by the new CSS rule
+            # The label here will be styled by the new CSS rule
             st.metric(
                 label="💰 Total Revenue", 
                 value=f"${total_revenue:,.2f}"
@@ -204,7 +230,7 @@ def main_dashboard():
     st.dataframe(df.head(), use_container_width=True)
 
 # -------------------------
-# App routing and Run App (UNCHANGED)
+# App routing
 # -------------------------
 def main():
     if not st.session_state.get("logged_in", False):
@@ -212,5 +238,8 @@ def main():
     else:
         main_dashboard()
 
+# -------------------------
+# Run app
+# -------------------------
 if __name__ == "__main__":
     main()
