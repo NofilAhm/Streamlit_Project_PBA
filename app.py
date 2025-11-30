@@ -6,6 +6,7 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 import altair as alt
+import numpy as np # Needed for numerical operations
 
 # Initialize session state for navigation
 if "current_tab" not in st.session_state:
@@ -27,7 +28,6 @@ FOODPANDA_THEME = """
 
 /* 2. PUSH CONTENT DOWN (Top Space Reduction on Main Content) */
 [data-testid="stApp"] {
-    /* 🚨 FIX: Reduced padding from 20px to 0px for maximum space reduction */
     padding-top: 0px !important; 
 }
 
@@ -44,7 +44,6 @@ FOODPANDA_THEME = """
 }
 
 /* 4. Ensure input labels and titles are visible (Set to brand pink on pink background) */
-/* This rule affects the main dashboard area text */
 .stTextInput > label, h1, h2, h3, h4, .stMarkdown {
     color: #D70F64 !important; 
 }
@@ -75,17 +74,17 @@ FOODPANDA_THEME = """
 
 /* Sidebar Styling for Spacing and Font Color */
 [data-testid="stSidebar"] > div:first-child {
-    padding-top: 10px !important; /* Reduced top space */
+    padding-top: 10px !important; 
 }
 [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, 
 [data-testid="stSidebar"] h3, 
 [data-testid="stSidebar"] h4, 
 [data-testid="stSidebar"] .stMarkdown {
-    color: white !important; /* White font color */
+    color: white !important; 
 }
 
-/* 🚨 NEW FIX: Login Dashboard Title Styling (White text on pink background) */
+/* Login Dashboard Title Styling (White text on pink background) */
 .login-title {
     color: white !important; 
     text-align: center;
@@ -111,16 +110,13 @@ if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 # -------------------------
-# Login function (UPDATED)
+# Login function 
 # -------------------------
 def login():
     col1, col2, col3 = st.columns([1, 1, 1]) 
     
     with col2:
-        # 🚨 FIX: Image removed as requested
-        # st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Foodpanda_logo.svg/320px-Foodpanda_logo.svg.png", width=100) 
-
-        # 🚨 FIX: Updated heading text and applied white color using CSS class
+        # Updated heading text and applied white color using CSS class
         st.markdown("<h2 class='login-title'>FOODPANDA SALES DASHBOARD</h2>", unsafe_allow_html=True)
         
         with st.container(border=True): 
@@ -162,7 +158,8 @@ def load_data():
         df['Order_Day'] = df['order_date'].dt.normalize()
         df['DayOfWeek'] = df['order_date'].dt.day_name()
         
-        df.dropna(subset=['order_id', 'order_date', 'sales'], inplace=True)
+        # Ensure essential columns are clean
+        df.dropna(subset=['order_id', 'order_date', 'sales', 'customer_id'], inplace=True)
         
         return df
 
@@ -184,12 +181,10 @@ def show_sales_overview(df):
     
     if ORDER_COL in df.columns and PRICE_COL in df.columns:
         
-        # KPI Calculations
         total_revenue = df[PRICE_COL].sum()
         total_orders = df[ORDER_COL].nunique()
         average_order_value = total_revenue / total_orders if total_orders else 0
         
-        # KPI Display
         st.header("Sales Overview")
         st.subheader("Key Performance Indicators (KPIs) for All Time")
         
@@ -228,9 +223,60 @@ def show_sales_overview(df):
         st.warning("Cannot generate monthly sales chart. Check 'order_date' and 'sales' columns.")
 
 def show_customer_overview(df):
+    """Generates the content for the Customer Overview tab, including KPIs."""
+    CUST_COL = 'customer_id' 
+    PRICE_COL = 'sales'
+    DATE_COL = 'order_date'
+
     st.title("Customer Overview Dashboard 👥")
     st.write("---")
-    st.info("Content coming soon! This tab will analyze customer segments and lifetime value.")
+    
+    if CUST_COL in df.columns and PRICE_COL in df.columns and DATE_COL in df.columns:
+        
+        # --- KPI Calculations ---
+        total_customers = df[CUST_COL].nunique()
+        total_revenue = df[PRICE_COL].sum()
+        
+        # 1. Sales per Customer (Average Customer Value)
+        sales_per_customer = total_revenue / total_customers if total_customers else 0
+        
+        # 2. Customer Churn Rate (Approximation)
+        present_date = df[DATE_COL].max()
+        
+        # Find last order date for each customer
+        last_order_df = df.groupby(CUST_COL)[DATE_COL].max().reset_index()
+
+        # Calculate days since last order
+        last_order_df['days_since_last_order'] = (present_date - last_order_df[DATE_COL]).dt.days
+
+        # Define churned as no order in the last 180 days (6 months)
+        CHURN_THRESHOLD_DAYS = 180
+        churned_customers = last_order_df[last_order_df['days_since_last_order'] > CHURN_THRESHOLD_DAYS][CUST_COL].count()
+
+        # Calculate churn rate percentage
+        churn_rate_percent = (churned_customers / total_customers) * 100 if total_customers else 0
+        
+        # --- KPI Display ---
+        st.header("Customer KPIs")
+        st.subheader(f"Metrics calculated based on a dataset end date of: {present_date.strftime('%Y-%m-%d')}")
+        
+        kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
+        
+        with kpi_col1:
+            st.metric(label="👥 Total Customers", value=f"{total_customers:,}")
+        with kpi_col2:
+            st.metric(label="💸 Sales Per Customer (ACV)", value=f"${sales_per_customer:,.2f}")
+        with kpi_col3:
+            st.metric(
+                label="📉 Customer Churn Rate", 
+                value=f"{churn_rate_percent:.2f}%",
+                help=f"Customers are considered churned if they have not ordered in the last {CHURN_THRESHOLD_DAYS} days."
+            )
+        
+        st.write("---")
+    else:
+        st.warning("Customer KPIs cannot be calculated. Ensure 'customer_id', 'sales', and 'order_date' columns exist.")
+
 
 def show_product_overview(df):
     st.title("Product Overview Dashboard 🍔")
