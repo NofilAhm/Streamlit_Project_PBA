@@ -140,9 +140,9 @@ def login():
 
 
 # --------------------------------------------------------------------------------
-# Data Loading and Preparation Function (FIXED FOR GITHUB RAW URL)
+# Data Loading and Preparation Function (FIXED FOR CORRECT GITHUB RAW URL)
 # --------------------------------------------------------------------------------
-# 🟢 Data Source: Loading directly from your GitHub raw URL to avoid deployment path errors.
+# 🟢 Data Source: Corrected URL for the 'main' branch and added '.csv' extension.
 GITHUB_DATA_URL = "https://raw.githubusercontent.com/NofilAhm/Streamlit_Project_PBA/main/dataset.csv" 
 
 @st.cache_data
