@@ -4,7 +4,7 @@
 # In[1]:
 import streamlit as st
 import pandas as pd
-from pathlib import Path  # CRITICAL for robust path handling
+from pathlib import Path 
 import altair as alt
 import numpy as np
 
@@ -137,33 +137,26 @@ def login():
                     return 
                 else:
                     st.error("Invalid username or password")
-                    
-# -------------------------
-# Data Loading and Preparation Function (FIXED PATH)
-# -------------------------
+
+
+# --------------------------------------------------------------------------------
+# Data Loading and Preparation Function (FIXED FOR GITHUB RAW URL)
+# --------------------------------------------------------------------------------
+# 🟢 Data Source: Loading directly from your GitHub raw URL to avoid deployment path errors.
+GITHUB_DATA_URL = "https://raw.githubusercontent.com/NofilAhm/Streamlit_Project_PBA/main/dataset.csv" 
+
 @st.cache_data
 def load_data():
     """
-    Loads, cleans, and engineers features for the sales dashboard.
-    Uses pathlib to construct a path relative to the script's location 
-    to robustly handle "File Not Found" errors.
+    Loads, cleans, and engineers features for the sales dashboard 
+    directly from a stable web URL to avoid file path errors in deployment.
     """
     
-    # --- Robust Path Resolution ---
-    # This attempts to find the file relative to the script's location.
-    DATA_FILE = Path(__file__).parent / "dataset.csv" 
+    data_source = GITHUB_DATA_URL
 
     try:
-        # Check if the file exists before attempting to read it
-        if not DATA_FILE.exists():
-            # FALLBACK check for environments where the CWD is the project root
-            DATA_FILE = Path("dataset.csv") 
-            if not DATA_FILE.exists():
-                 # Final detailed error message if both paths fail
-                 raise FileNotFoundError(f"Data file not found after checking script location and CWD. Checked paths: {Path(__file__).parent / 'dataset.csv'} and {Path('dataset.csv').resolve()}")
-
-        print(f"Attempting to load data from: {DATA_FILE.resolve()}") # Log the final path
-        df = pd.read_csv(DATA_FILE) 
+        # Load data directly from the URL
+        df = pd.read_csv(data_source) 
         
         # --- DATA CLEANING & FEATURE ENGINEERING ---
         DATE_COLUMNS = ['signup_date', 'order_date', 'last_order_date', 'rating_date']
@@ -190,12 +183,12 @@ def load_data():
         return df
 
     except Exception as e:
-        st.error(f"Failed to load or process data. Error: {e}")
+        st.error(f"Failed to load or process data from URL. Please ensure your dataset is correctly named 'dataset.csv' and is public. Error: {e}")
         return pd.DataFrame() 
 
-# -------------------------
+# --------------------------------------------------------------------------------
 # Tab Content Functions
-# -------------------------
+# --------------------------------------------------------------------------------
 
 def show_sales_overview(df):
     """Generates the content for the Sales Overview tab."""
@@ -384,7 +377,7 @@ def show_product_overview(df):
         return
 
     # ----------------------------------------------------
-    #  --- NEW: Sales Visualization Section (Restaurant & Dish) ---
+    #  --- Sales Visualization Section (Restaurant & Dish) ---
     # ----------------------------------------------------
     st.header("Sales Performance Visualizations 📈")
     col_rest_sales, col_dish_sales = st.columns(2)
@@ -426,10 +419,6 @@ def show_product_overview(df):
         st.altair_chart(chart_dish, use_container_width=True)
         
     st.write("---")
-    # ----------------------------------------------------
-    #  --- END NEW SALES VISUALIZATION SECTION ---
-    # ----------------------------------------------------
-
 
     # --- 1. Top Sellers Section (Original Top Sellers by Quantity/Revenue) ---
     st.header("Top Sellers (Quantity vs. Revenue)")
