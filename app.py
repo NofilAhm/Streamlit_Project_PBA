@@ -7,11 +7,15 @@ import pandas as pd
 from pathlib import Path
 import altair as alt
 
+# Initialize session state for navigation
+if "current_tab" not in st.session_state:
+    st.session_state["current_tab"] = "Sales Overview" # Default tab
+
 # Set the page configuration to wide layout
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Styling and Readability (UPDATED SIDEBAR STYLES)
+# Custom CSS for Styling and Readability (UPDATED for Active Tab)
 # -------------------------
 FOODPANDA_THEME = """
 <style>
@@ -55,7 +59,7 @@ FOODPANDA_THEME = """
     color: white !important; 
 }
 
-/* 🚨 KPI LABEL FIX: Large, bold titles for metrics */
+/* KPI LABEL FIX: Large, bold titles for metrics */
 [data-testid="stMetricLabel"] {
     font-size: 1.35rem !important; 
     font-weight: bold !important; 
@@ -67,14 +71,10 @@ FOODPANDA_THEME = """
     color: #333333 !important; 
 }
 
-/* 🚨 NEW FIX: Sidebar Styling for Spacing and Font Color */
-/* Target the overall sidebar container for reduced space */
+/* Sidebar Styling for Spacing and Font Color */
 [data-testid="stSidebar"] > div:first-child {
-    /* Reduced padding-top to bring content up (approx 1 inch reduction) */
     padding-top: 10px !important; 
 }
-
-/* Target the text elements inside the sidebar for white color */
 [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, 
 [data-testid="stSidebar"] h3, 
@@ -83,6 +83,15 @@ FOODPANDA_THEME = """
     color: white !important;
 }
 
+/* 🚨 NEW FIX: Styling for the Active Sidebar Tab */
+/* This targets the specific button that is 'selected' (based on its unique key) */
+.active-tab-button {
+    background-color: white !important; /* White background for the active tab */
+    color: #D70F64 !important; /* Pink text for the active tab */
+    border: 2px solid white !important;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Optional shadow for pop */
+}
 </style>
 """
 st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
@@ -139,24 +148,18 @@ def load_data():
         df = pd.read_csv(DATA_FILE)
         
         # --- DATA CLEANING & FEATURE ENGINEERING ---
-        
-        # 1. Date Conversions
         DATE_COLUMNS = ['signup_date', 'order_date', 'last_order_date', 'rating_date']
         for col in DATE_COLUMNS:
             df[col] = pd.to_datetime(df[col], errors='coerce')
             
-        # 2. Ensure Price and Quantity are numeric
         df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
             
-        # 3. Calculate Sales (Revenue per item)
         df['sales'] = df['quantity'] * df['price']
         
-        # 4. Create Time-Based Features for Charts
-        df['Order_Day'] = df['order_date'].dt.normalize() # Day only
+        df['Order_Day'] = df['order_date'].dt.normalize()
         df['DayOfWeek'] = df['order_date'].dt.day_name()
         
-        # 5. Drop rows where essential data is missing
         df.dropna(subset=['order_id', 'order_date', 'sales'], inplace=True)
         
         return df
@@ -166,7 +169,75 @@ def load_data():
         return pd.DataFrame() 
 
 # -------------------------
-# Dashboard function
+# Tab Content Functions
+# -------------------------
+
+def show_sales_overview(df):
+    """Generates the content for the Sales Overview tab."""
+    ORDER_COL = 'order_id' 
+    PRICE_COL = 'sales'
+
+    st.title("Foodpanda Sales Overview Dashboard 🐼")
+    st.write("---")
+    
+    if ORDER_COL in df.columns and PRICE_COL in df.columns:
+        
+        # KPI Calculations
+        total_revenue = df[PRICE_COL].sum()
+        total_orders = df[ORDER_COL].nunique()
+        average_order_value = total_revenue / total_orders if total_orders else 0
+        
+        # KPI Display
+        st.header("Sales Overview")
+        st.subheader("Key Performance Indicators (KPIs) for All Time")
+        
+        kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
+        
+        with kpi_col1:
+            st.metric(label="💰 Total Revenue", value=f"${total_revenue:,.2f}")
+        with kpi_col2:
+            st.metric(label="📦 Total Orders", value=f"{total_orders:,}")
+        with kpi_col3:
+            st.metric(label="💸 Average Order Value (AOV)", value=f"${average_order_value:,.2f}")
+        
+        st.write("---")
+    
+    # MONTH-WISE SALES CHART
+    if 'order_date' in df.columns and PRICE_COL in df.columns:
+        st.subheader("Monthly Revenue Trend (Month and Year)")
+        
+        df['Order_Month_Date'] = df['order_date'].dt.to_period('M').dt.start_time
+        
+        monthly_sales = df.groupby('Order_Month_Date')[PRICE_COL].sum().reset_index()
+        monthly_sales.columns = ['Month', 'Total Sales']
+
+        chart = alt.Chart(monthly_sales).mark_line(point=True, color='#D70F64').encode(
+            x=alt.X('Month:T', 
+                    axis=alt.Axis(title='Month and Year', format='%b %Y')),
+            y=alt.Y('Total Sales:Q', axis=alt.Axis(title='Total Revenue ($)')),
+            tooltip=[alt.Tooltip('Month', format='%b %Y'), alt.Tooltip('Total Sales', format='$,.2f')]
+        ).properties(
+            title='Monthly Revenue Over Time'
+        ).interactive()
+        
+        st.altair_chart(chart, use_container_width=True)
+        st.write("---")
+    else:
+        st.warning("Cannot generate monthly sales chart. Check 'order_date' and 'sales' columns.")
+
+def show_customer_overview(df):
+    st.title("Customer Overview Dashboard 👥")
+    st.write("---")
+    st.info("Content coming soon! This tab will analyze customer segments and lifetime value.")
+
+def show_product_overview(df):
+    st.title("Product Overview Dashboard 🍔")
+    st.write("---")
+    st.info("Content coming soon! This tab will analyze best-selling items and categories.")
+
+
+# -------------------------
+# Main Dashboard Function (Routing Logic)
 # -------------------------
 def main_dashboard():
     # Reset background theme for the main dashboard content area
@@ -182,83 +253,48 @@ def main_dashboard():
         </style>
         """, unsafe_allow_html=True)
     
-    # 🚨 NOTE: The font color is now controlled by the CSS above, 
-    # but we will use Markdown to ensure the welcome message is rendered correctly.
-    st.sidebar.title("Dashboard Menu")
-    st.sidebar.markdown(f"**Welcome, {st.session_state['username']}**") # Use markdown for bold and color control
-    if st.sidebar.button("Logout"):
-        st.session_state.clear() 
-        st.rerun() 
-
-    st.title("Foodpanda Sales Overview Dashboard 🐼")
-    st.write("---")
-
-    # Load the data
     df = load_data() 
-    
     if df.empty:
         st.warning("Data loading failed. Please check file path and data format.")
         return
 
-    # ------------------------------------
-    # KPI Implementation (UNCHANGED)
-    # ------------------------------------
-    ORDER_COL = 'order_id' 
-    PRICE_COL = 'sales'
-
-    if ORDER_COL in df.columns and PRICE_COL in df.columns:
-        
-        total_revenue = df[PRICE_COL].sum()
-        total_orders = df[ORDER_COL].nunique()
-        average_order_value = total_revenue / total_orders if total_orders else 0
-        
-        st.header("Sales Overview")
-        st.subheader("Key Performance Indicators (KPIs) for All Time")
-        
-        kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
-        
-        with kpi_col1:
-            st.metric(label="💰 Total Revenue", value=f"${total_revenue:,.2f}")
-        with kpi_col2:
-            st.metric(label="📦 Total Orders", value=f"{total_orders:,}")
-        with kpi_col3:
-            st.metric(label="💸 Average Order Value (AOV)", value=f"${average_order_value:,.2f}")
-        
-        st.write("---")
+    # --- Sidebar Setup ---
+    st.sidebar.title("Dashboard Menu")
+    st.sidebar.markdown(f"**Welcome, {st.session_state['username']}**")
     
-    # ------------------------------------
-    # MONTH-WISE SALES CHART (UNCHANGED)
-    # ------------------------------------
-    if 'order_date' in df.columns and PRICE_COL in df.columns:
-        st.subheader("Monthly Revenue Trend (Month and Year)")
+    # Logout Button
+    if st.sidebar.button("Logout"):
+        st.session_state.clear() 
+        st.rerun() 
         
-        df['Order_Month_Date'] = df['order_date'].dt.to_period('M').dt.start_time
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Navigation")
+    
+    # --- Tab Buttons ---
+    TAB_NAMES = ["Sales Overview", "Customer Overview", "Product Overview"]
+    
+    for tab_name in TAB_NAMES:
+        is_active = (st.session_state["current_tab"] == tab_name)
         
-        monthly_sales = df.groupby('Order_Month_Date')[PRICE_COL].sum().reset_index()
-        monthly_sales.columns = ['Month', 'Total Sales']
+        # Use custom styling class for the active button
+        button_style = "active-tab-button" if is_active else ""
+        
+        # Streamlit button using custom HTML and key
+        if st.sidebar.markdown(
+            f'<button class="{button_style}" style="width: 100%; height: 50px; margin-bottom: 10px; border-radius: 0.25rem;">{tab_name}</button>',
+            unsafe_allow_html=True
+        ):
+            st.session_state["current_tab"] = tab_name
+            st.rerun()
 
-        chart = alt.Chart(monthly_sales).mark_line(point=True, color='#D70F64').encode(
-            x=alt.X('Month:T', 
-                    axis=alt.Axis(
-                        title='Month and Year',
-                        format='%b %Y' 
-                    )
-            ),
-            y=alt.Y('Total Sales:Q', axis=alt.Axis(title='Total Revenue ($)')),
-            tooltip=[alt.Tooltip('Month', format='%b %Y'), alt.Tooltip('Total Sales', format='$,.2f')]
-        ).properties(
-            title='Monthly Revenue Over Time'
-        ).interactive() 
-        
-        st.altair_chart(chart, use_container_width=True)
-        st.write("---")
-    else:
-        st.warning("Cannot generate monthly sales chart. Check 'order_date' and 'sales' columns.")
+    # --- Content Routing ---
+    if st.session_state["current_tab"] == "Sales Overview":
+        show_sales_overview(df)
+    elif st.session_state["current_tab"] == "Customer Overview":
+        show_customer_overview(df)
+    elif st.session_state["current_tab"] == "Product Overview":
+        show_product_overview(df)
 
-    # Display raw data preview (UNCHANGED)
-    st.subheader("Raw Data Preview")
-    st.write(f"Rows: **{df.shape[0]}**, Columns: **{df.shape[1]}**")
-    st.dataframe(df.head(), use_container_width=True)
 
 # -------------------------
 # App routing (UNCHANGED)
