@@ -145,12 +145,11 @@ def login():
 def load_data():
     """Loads, cleans, and engineers features for the sales dashboard."""
     
-    # Assume the dataset is in a file named 'dataset.csv' in the same directory
-    DATA_FILE = Path(__file__).parent / "dataset.csv" 
+    # Assuming 'dataset.csv' is in the same directory as this script.
+    DATA_FILE = "dataset.csv" 
 
     try:
-        # NOTE: Using simplified path for deployment purposes, assume file is present.
-        df = pd.read_csv("dataset.csv") 
+        df = pd.read_csv(DATA_FILE) 
         
         # --- DATA CLEANING & FEATURE ENGINEERING ---
         DATE_COLUMNS = ['signup_date', 'order_date', 'last_order_date', 'rating_date']
@@ -160,7 +159,7 @@ def load_data():
         df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
         
-        # Ensure 'item_name' and 'category' are strings and handle NaNs for grouping
+        # Ensure 'item_name', 'category', and 'restaurant_name' are strings and handle NaNs for grouping
         df['item_name'] = df['item_name'].astype(str).fillna('Unknown Item')
         df['category'] = df['category'].astype(str).fillna('Unknown Category')
         df['restaurant_name'] = df['restaurant_name'].astype(str).fillna('Unknown Restaurant')
@@ -177,6 +176,7 @@ def load_data():
         return df
 
     except Exception as e:
+        # NOTE: This error message remains helpful if the file isn't found.
         st.error(f"Failed to load or process data. Error: {e}")
         return pd.DataFrame() 
 
@@ -302,7 +302,7 @@ def show_customer_overview(df):
                 st.info("Cannot show Payment Method chart. Missing 'payment_method' column.")
 
 
-        # 2. Pie Chart: Age Distribution (Right Column) - REMOVED ALL LABELS
+        # 2. Pie Chart: Age Distribution (Right Column) - NO LABELS
         with chart_col2:
             if AGE_GROUP_COL in df.columns and CUST_COL in df.columns:
                 
@@ -359,7 +359,7 @@ def show_product_overview(df):
     QTY_COL = 'quantity'
     SALES_COL = 'sales'
     RATING_COL = 'rating'
-    ISSUES_COL = 'delivery_issues' # Assuming a boolean/numeric column for delivery issues
+    ISSUES_COL = 'delivery_issues' 
 
     st.title("Product & Restaurant Overview Dashboard 🍔")
     st.write("---")
@@ -471,8 +471,12 @@ def show_product_overview(df):
     with col_rating:
         st.subheader("⭐ Category Average Rating")
         
+        # Determine rating scale min/max for better visualization (if RATING_COL exists)
+        rating_scale_min = df[RATING_COL].min() * 0.9 if RATING_COL in df.columns and not df[RATING_COL].empty else 1
+        rating_scale_max = df[RATING_COL].max() * 1.1 if RATING_COL in df.columns and not df[RATING_COL].empty else 5
+
         chart_rating = alt.Chart(category_summary).mark_bar(color='#FF5A93').encode(
-            x=alt.X('Average Rating:Q', title='Average Rating', scale=alt.Scale(domain=[df[RATING_COL].min() * 0.9, df[RATING_COL].max() * 1.1])),
+            x=alt.X('Average Rating:Q', title='Average Rating', scale=alt.Scale(domain=[rating_scale_min, rating_scale_max])),
             y=alt.Y(CATEGORY_COL + ':N', sort=alt.EncodingSortField(field='Average Rating', order='descending'), title=''),
             tooltip=[CATEGORY_COL, alt.Tooltip('Average Rating', format='.2f')]
         ).properties(height=350)
@@ -488,7 +492,8 @@ def show_product_overview(df):
     restaurant_summary = df.groupby(RESTAURANT_COL).agg(
         Total_Sales=(SALES_COL, 'sum'),
         Avg_Rating=(RATING_COL, 'mean'),
-        Delivery_Issues_Count=('delivery_issues', 'sum') # Assuming delivery_issues is 1 for issue, 0 for none
+        # Assuming delivery_issues is 1 for issue, 0 for none, or count of non-null issues
+        Delivery_Issues_Count=(ISSUES_COL, 'sum') 
     ).reset_index()
     restaurant_summary['Avg_Rating'] = restaurant_summary['Avg_Rating'].round(2)
     
@@ -551,7 +556,7 @@ def main_dashboard():
     
     df = load_data() 
     if df.empty:
-        st.warning("Data loading failed. Please check file path and data format.")
+        # If data load failed, display the warning and stop execution
         return
 
     # --- Sidebar Setup ---
@@ -595,12 +600,14 @@ def main_dashboard():
 
 
     # --- Content Routing ---
-    if st.session_state["current_tab"] == "Sales Overview":
-        show_sales_overview(df)
-    elif st.session_state["current_tab"] == "Customer Overview":
-        show_customer_overview(df)
-    elif st.session_state["current_tab"] == "Product Overview":
-        show_product_overview(df)
+    # Only render content if the dataframe is NOT empty
+    if not df.empty:
+        if st.session_state["current_tab"] == "Sales Overview":
+            show_sales_overview(df)
+        elif st.session_state["current_tab"] == "Customer Overview":
+            show_customer_overview(df)
+        elif st.session_state["current_tab"] == "Product Overview":
+            show_product_overview(df)
 
 
 # -------------------------
