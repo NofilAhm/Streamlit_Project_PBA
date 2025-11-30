@@ -15,7 +15,7 @@ if "current_tab" not in st.session_state:
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Styling and Readability (UPDATED for Active Tab)
+# Custom CSS for Styling and Readability
 # -------------------------
 FOODPANDA_THEME = """
 <style>
@@ -47,7 +47,7 @@ FOODPANDA_THEME = """
     color: #D70F64 !important; 
 }
 
-/* 5. General Button Styling */
+/* 5. General Button Styling (Default) */
 .stButton > button {
     background-color: #FFFFFF;
     border: 1px solid #D70F64;
@@ -73,31 +73,24 @@ FOODPANDA_THEME = """
 
 /* Sidebar Styling for Spacing and Font Color */
 [data-testid="stSidebar"] > div:first-child {
-    padding-top: 10px !important; 
+    padding-top: 10px !important; /* Reduced top space */
 }
 [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, 
 [data-testid="stSidebar"] h3, 
 [data-testid="stSidebar"] h4, 
 [data-testid="stSidebar"] .stMarkdown {
-    color: white !important;
+    color: white !important; /* White font color */
 }
 
-/* 🚨 NEW FIX: Styling for the Active Sidebar Tab */
-/* This targets the specific button that is 'selected' (based on its unique key) */
-.active-tab-button {
-    background-color: white !important; /* White background for the active tab */
-    color: #D70F64 !important; /* Pink text for the active tab */
-    border: 2px solid white !important;
-    font-weight: bold;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Optional shadow for pop */
-}
+/* The styling for the active tab button will be applied dynamically in Python */
+
 </style>
 """
 st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
 
 # -------------------------
-# Hardcoded users & Session State (UNCHANGED)
+# Hardcoded users & Session State
 # -------------------------
 USERS = {
     "nofil": "12345",
@@ -110,7 +103,7 @@ if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 # -------------------------
-# Login function (UNCHANGED)
+# Login function
 # -------------------------
 def login():
     col1, col2, col3 = st.columns([1, 1, 1]) 
@@ -136,7 +129,7 @@ def login():
                     st.error("Invalid username or password")
                     
 # -------------------------
-# Data Loading and Preparation Function (UNCHANGED)
+# Data Loading and Preparation Function
 # -------------------------
 @st.cache_data
 def load_data():
@@ -237,7 +230,7 @@ def show_product_overview(df):
 
 
 # -------------------------
-# Main Dashboard Function (Routing Logic)
+# Main Dashboard Function (FIXED ROUTING LOGIC)
 # -------------------------
 def main_dashboard():
     # Reset background theme for the main dashboard content area
@@ -263,29 +256,45 @@ def main_dashboard():
     st.sidebar.markdown(f"**Welcome, {st.session_state['username']}**")
     
     # Logout Button
-    if st.sidebar.button("Logout"):
+    if st.sidebar.button("Logout", key="logout_btn"):
         st.session_state.clear() 
         st.rerun() 
         
     st.sidebar.markdown("---")
     st.sidebar.subheader("Navigation")
     
-    # --- Tab Buttons ---
+    # --- Tab Buttons (STABLE LOGIC) ---
     TAB_NAMES = ["Sales Overview", "Customer Overview", "Product Overview"]
+    current_tab = st.session_state["current_tab"]
     
-    for tab_name in TAB_NAMES:
-        is_active = (st.session_state["current_tab"] == tab_name)
-        
-        # Use custom styling class for the active button
-        button_style = "active-tab-button" if is_active else ""
-        
-        # Streamlit button using custom HTML and key
-        if st.sidebar.markdown(
-            f'<button class="{button_style}" style="width: 100%; height: 50px; margin-bottom: 10px; border-radius: 0.25rem;">{tab_name}</button>',
-            unsafe_allow_html=True
-        ):
-            st.session_state["current_tab"] = tab_name
+    # Function to create a standard Streamlit button and apply custom styling based on state
+    def nav_button(label, current_tab):
+        # 1. Check if the button is clicked
+        if st.sidebar.button(label, use_container_width=True, key=f"nav_{label}"):
+            st.session_state["current_tab"] = label
             st.rerun()
+            
+        # 2. If it's the current active tab, inject CSS to change its appearance
+        if current_tab == label:
+            st.sidebar.markdown(
+                f"""
+                <style>
+                    /* Target the specific button by its key (used in st.button) */
+                    [data-testid="stSidebar"] button[kind="secondary"][key="nav_{label}"] {{
+                        background-color: white !important;
+                        color: #D70F64 !important;
+                        border: 2px solid white !important;
+                        font-weight: bold;
+                    }}
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    # Render the navigation buttons using the stable function
+    for tab in TAB_NAMES:
+        nav_button(tab, current_tab)
+
 
     # --- Content Routing ---
     if st.session_state["current_tab"] == "Sales Overview":
@@ -297,7 +306,7 @@ def main_dashboard():
 
 
 # -------------------------
-# App routing (UNCHANGED)
+# App routing
 # -------------------------
 def main():
     if not st.session_state.get("logged_in", False):
@@ -306,7 +315,7 @@ def main():
         main_dashboard()
 
 # -------------------------
-# Run app (UNCHANGED)
+# Run app
 # -------------------------
 if __name__ == "__main__":
     main()
