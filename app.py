@@ -2,18 +2,11 @@
 # coding: utf-8
 
 # In[1]:import streamlit as st
-import pandas as pd
-from pathlib import Path
-import altair as alt
-import streamlit as st # ⬅️ THIS LINE IS ESSENTIAL
+import streamlit as st
 import pandas as pd
 from pathlib import Path
 import altair as alt
 
-# Set the page configuration to wide layout
-st.set_page_config(layout="wide") 
-
-# ... (Rest of your code follows) ...
 # Set the page configuration to wide layout
 st.set_page_config(layout="wide") 
 
@@ -62,7 +55,7 @@ FOODPANDA_THEME = """
     color: white !important; 
 }
 
-/* 🚨 FINAL FIX: Increase size and bold the KPI metric labels (Targets the label element) */
+/* 🚨 KPI LABEL FIX: Large, bold titles for metrics */
 [data-testid="stMetricLabel"] {
     font-size: 1.35rem !important; 
     font-weight: bold !important; 
@@ -201,7 +194,9 @@ def main_dashboard():
         total_orders = df[ORDER_COL].nunique()
         average_order_value = total_revenue / total_orders if total_orders else 0
         
-        st.header("Key Performance Indicators (KPIs) for All Time")
+        # 💡 ADDED SECTION HEADING
+        st.header("Sales Overview")
+        st.subheader("Key Performance Indicators (KPIs) for All Time")
         
         kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
         
