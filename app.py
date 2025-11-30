@@ -296,7 +296,7 @@ def show_customer_overview(df):
                 st.info("Cannot show Payment Method chart. Missing 'payment_method' column.")
 
 
-        # 2. Pie Chart: Age Distribution (Right Column) - ENHANCED
+        # 2. Pie Chart: Age Distribution (Right Column) - Label Overlap Fix
         with chart_col2:
             if AGE_GROUP_COL in df.columns and CUST_COL in df.columns:
                 
@@ -319,14 +319,14 @@ def show_customer_overview(df):
                     
                     color_scale = alt.Scale(range=['#D70F64', '#FF5A93', '#FF8CC6', '#6A053F', '#9C0A52'])
 
-                    arc = pie_chart.mark_arc(outerRadius=120, innerRadius=30).encode(
+                    # Draw the arcs (pie slices) - Adjusted outerRadius for better spacing
+                    arc = pie_chart.mark_arc(outerRadius=130, innerRadius=30).encode( # Outer radius adjusted
                         color=alt.Color("Age Group:N", scale=color_scale),
                         order=alt.Order("Customer Count", sort="descending"),
-                        # 🚨 FIX APPLIED HERE: Using alt.Tooltip correctly with format and title
                         tooltip=[
                             "Age Group", 
                             "Customer Count", 
-                            alt.Tooltip('Percentage', format='.2f', title='Contribution (%)') # Using title to add clarity to the percentage
+                            alt.Tooltip('Percentage', format='.2f', title='Contribution (%)') 
                         ] 
                     )
                     
@@ -335,7 +335,8 @@ def show_customer_overview(df):
                         lambda row: f"{row['Customer Count']} ({row['Percentage']:.1f}%)", axis=1
                     )
                     
-                    text = alt.Chart(age_counts).mark_text(radius=140, fill="black", fontSize=14).encode(
+                    # Text labels: Radius increased to 155 to push labels further out for separation
+                    text = alt.Chart(age_counts).mark_text(radius=155, fill="black", fontSize=14).encode( # Radius adjusted
                         text=alt.Text("formatted_label:N"),
                         order=alt.Order("Customer Count", sort="descending"),
                         color=alt.value("black")
