@@ -2,53 +2,63 @@
 # coding: utf-8
 
 # In[1]:
-
 import streamlit as st
 
 # Set the page configuration to wide layout
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Foodpanda Theme
+# Custom CSS for Foodpanda Theme (MORE AGGRESSIVE)
 # -------------------------
-# The background color is now RGBA: rgb(215, 15, 100) with 80% opacity (0.8 alpha)
 FOODPANDA_THEME = """
 <style>
-/* Change the primary background color */
-.stApp {
-    background-color: rgba(215, 15, 100, 0.8); /* Foodpanda Pink (80% opacity) */
-    color: white; /* Ensure general text is white */
+/* 1. AGGRESSIVE BACKGROUND COLOR FIX (20% transparent Foodpanda Pink) */
+[data-testid="stAppViewContainer"] {
+    background-color: rgba(215, 15, 100, 0.8) !important; 
+    color: white !important; 
 }
 
-/* 💡 CHANGE 1: Make input text white (Targets the actual input field) */
+/* 2. CENTER THE MAIN CONTENT VERTICALLY AND HORIZONTALLY */
+/* Adjust main block position to simulate moving down */
+[data-testid="stApp"] {
+    padding-top: 80px; /* Pushes content down about 1.5 inches */
+}
+
+/* 3. INPUT FIELD STYLING */
+/* Targets the actual input element */
 .stTextInput > div > div > input {
-    color: white !important; 
-    background-color: rgba(255, 255, 255, 0.1); /* Slightly transparent background for fields */
-    border: 1px solid white; 
+    color: white !important; /* Forces input text to be white */
+    background-color: transparent !important; /* Makes input field background transparent */
+    border: 1px solid white !important; 
 }
 
-/* Style for the labels and general markdown text */
-.stMarkdown {
-    color: white !important; 
+/* 4. Ensure input labels (Username, Password) are white */
+.stTextInput > label {
+    color: white !important;
 }
 
-/* Style the buttons */
+/* 5. Style the login button */
 .stButton > button {
-    background-color: #FFFFFF; /* White button */
+    background-color: #FFFFFF;
     border: 1px solid #D70F64;
-    color: #D70F64 !important; /* Foodpanda pink text */
+    color: #D70F64 !important;
     font-weight: bold;
 }
 .stButton > button:hover {
-    background-color: #FF5A93; /* Lighter pink on hover */
+    background-color: #FF5A93;
     color: white !important; 
 }
+
+/* 6. Ensure titles and general text remain white */
+h1, h2, h3, h4, .stMarkdown {
+    color: white !important;
+}
+
 </style>
 """
 
 # Apply the custom CSS
 st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
-
 
 # -------------------------
 # Hardcoded users (UNCHANGED)
@@ -67,26 +77,20 @@ if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 # -------------------------
-# Login function (SLIGHTLY MODIFIED INPUT STYLING)
+# Login function (SLIGHTLY SIMPLIFIED LAYOUT)
 # -------------------------
 def login():
-    # Use empty space and columns to center the login block and push it down
-    st.empty() # Top vertical space
-    st.empty() 
-    
     # Create a layout with columns to center the login box
     col1, col2, col3 = st.columns([1, 1, 1]) 
     
     with col2:
-        # Placeholder image URL 
+        # 1. Add the small Foodpanda logo image
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Foodpanda_logo.svg/320px-Foodpanda_logo.svg.png", 
                  width=100) 
 
-        # Title is now white thanks to global CSS
         st.markdown("<h2 style='text-align: center;'>Dashboard Login</h2>", unsafe_allow_html=True)
         
         with st.container(border=True): 
-            # Input fields are here - text color is controlled by CSS above
             username = st.text_input("Username", key="login_user")
             password = st.text_input("Password", type="password", key="login_pass")
 
@@ -101,15 +105,20 @@ def login():
                     st.error("Invalid username or password")
                     
 # -------------------------
-# Dashboard function (UNCHANGED)
+# Dashboard function
 # -------------------------
 def main_dashboard():
-    # Reset the background style for the dashboard content
+    # RESET THEME FOR DASHBOARD CONTENT
     st.markdown("""
         <style>
-        .stApp {
-            background-color: white; /* Set dashboard background back to solid white */
-            color: #333333;
+        /* Set background back to solid white for the dashboard */
+        [data-testid="stAppViewContainer"] {
+            background-color: white !important; 
+            color: #333333 !important;
+        }
+        /* Ensure sidebar keeps the pink color if you want it */
+        [data-testid="stSidebar"] {
+            background-color: rgba(215, 15, 100, 0.8) !important;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -123,10 +132,9 @@ def main_dashboard():
 
     st.title("Foodpanda Sales Dashboard")
     st.write("Your dashboard content goes here…")
-    # Add your data visualization code here
 
 # -------------------------
-# App routing (UNCHANGED)
+# App routing 
 # -------------------------
 def main():
     if not st.session_state.get("logged_in", False):
@@ -135,7 +143,7 @@ def main():
         main_dashboard()
 
 # -------------------------
-# Run app (UNCHANGED)
+# Run app
 # -------------------------
 if __name__ == "__main__":
     main()
