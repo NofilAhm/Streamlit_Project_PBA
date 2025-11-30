@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+F#!/usr/bin/env python
 # coding: utf-8
 
 # In[1]:
@@ -139,7 +139,7 @@ def login():
                     st.error("Invalid username or password")
                     
 # -------------------------
-# Data Loading and Preparation Function
+# Data Loading and Preparation Function (UPDATED)
 # -------------------------
 @st.cache_data
 def load_data():
@@ -157,7 +157,9 @@ def load_data():
             
         df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
-        df['age'] = pd.to_numeric(df['age'], errors='coerce') # Ensure age is numeric
+        
+        # 🚨 FIX: Removed pd.to_numeric for 'age' since it holds text-based age groups
+        # df['age'] = pd.to_numeric(df['age'], errors='coerce') 
             
         df['sales'] = df['quantity'] * df['price']
         
@@ -174,7 +176,7 @@ def load_data():
         return pd.DataFrame() 
 
 # -------------------------
-# Tab Content Functions
+# Tab Content Functions (UPDATED)
 # -------------------------
 
 def show_sales_overview(df):
@@ -233,13 +235,14 @@ def show_customer_overview(df):
     CUST_COL = 'customer_id' 
     PRICE_COL = 'sales'
     DATE_COL = 'order_date'
+    AGE_GROUP_COL = 'age' # Renamed for clarity in this function, but using 'age' column
 
     st.title("Customer Overview Dashboard 👥")
     st.write("---")
     
     if CUST_COL in df.columns and PRICE_COL in df.columns and DATE_COL in df.columns:
         
-        # --- KPI Calculations ---
+        # --- KPI Calculations (remains unchanged) ---
         total_customers = df[CUST_COL].nunique()
         total_revenue = df[PRICE_COL].sum()
         
@@ -294,29 +297,19 @@ def show_customer_overview(df):
                 st.info("Cannot show Payment Method chart. Missing 'payment_method' column.")
 
 
-        # 2. Pie Chart: Age Distribution (Right Column)
+        # 2. Pie Chart: Age Distribution (Right Column) - FIXED
         with chart_col2:
-            if 'age' in df.columns and CUST_COL in df.columns:
-                # Get unique customers and their age (handle potential nulls)
-                customer_age = df[[CUST_COL, 'age']].drop_duplicates(subset=[CUST_COL]).dropna(subset=['age'])
+            if AGE_GROUP_COL in df.columns and CUST_COL in df.columns:
+                
+                # 🚨 FIX: Group by the text Age Group directly. Drop rows where AGE is blank.
+                customer_age = df[[CUST_COL, AGE_GROUP_COL]].drop_duplicates(subset=[CUST_COL]).dropna(subset=[AGE_GROUP_COL])
                 
                 if not customer_age.empty:
                     
-                    # Define Bins for Age Groups
-                    # Ensure the max bin covers the maximum age in the data
-                    max_age = customer_age['age'].max()
-                    bins = [18, 25, 35, 45, 55, max_age + 1]
-                    labels = ['18-24', '25-34', '35-44', '45-54', '55+']
-                    
-                    customer_age['Age Group'] = pd.cut(
-                        customer_age['age'], 
-                        bins=bins, 
-                        labels=labels[:len(bins)-1], # Limit labels to number of resulting bins
-                        right=False, 
-                        include_lowest=True
-                    )
-                    
-                    age_counts = customer_age.groupby('Age Group')[CUST_COL].count().reset_index(name='Customer Count')
+                    # Count Customers per Age Group
+                    # Rename the age column to 'Age Group' for the chart title/legend
+                    age_counts = customer_age.groupby(AGE_GROUP_COL)[CUST_COL].count().reset_index()
+                    age_counts.columns = ['Age Group', 'Customer Count']
                     
                     st.subheader("Customer Distribution by Age Group")
 
@@ -326,6 +319,7 @@ def show_customer_overview(df):
                         title=None
                     )
                     
+                    # Custom color scheme for Foodpanda theme
                     color_scale = alt.Scale(range=['#D70F64', '#FF5A93', '#FF8CC6', '#6A053F', '#9C0A52'])
 
                     # Draw the arcs (pie slices)
@@ -347,11 +341,11 @@ def show_customer_overview(df):
                     st.altair_chart(final_pie, use_container_width=True)
                     
                 else:
-                    st.info("Age data is missing or empty for unique customers.")
+                    st.info(f"Age Group data is missing for unique customers.")
             else:
-                st.info("Cannot show Age Distribution chart. Missing 'age' or 'customer_id' column.")
+                st.info(f"Cannot show Age Distribution chart. Missing '{AGE_GROUP_COL}' or '{CUST_COL}' column.")
         
-        st.write("---") # Separator below the charts
+        st.write("---") 
     else:
         st.warning("Customer KPIs cannot be calculated. Ensure 'customer_id', 'sales', and 'order_date' columns exist.")
 
