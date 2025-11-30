@@ -5,15 +5,29 @@
 
 
 import streamlit as st
-# ... (USERS and session state initialization remains the same) ...
 
 # -------------------------
-# Login function (REVERTED TO BUTTON & INPUTS)
+# Hardcoded users
+# -------------------------
+USERS = {
+    "nofil": "12345",
+    "admin": "admin123"
+}
+
+# -------------------------
+# Initialize session state (Keep this at the top for first run setup)
+# -------------------------
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+if "username" not in st.session_state:
+    st.session_state["username"] = ""
+
+# -------------------------
+# Login function
 # -------------------------
 def login():
     st.title("Login Page")
     
-    # Use simple elements instead of st.form to avoid key conflicts
     username = st.text_input("Username", key="login_user")
     password = st.text_input("Password", type="password", key="login_pass")
 
@@ -23,47 +37,43 @@ def login():
             st.session_state["username"] = username
             st.success("Logged in successfully! Redirecting...")
             
-            # Use st.rerun() (the modern, stable version) and then return 
-            # to ensure the script stops the current execution immediately.
+            # Use st.rerun() and return for a clean transition
             st.rerun()
-            return # This is a failsafe
+            return 
 
         else:
             st.error("Invalid username or password")
 
 # -------------------------
-# Dashboard function (Using st.rerun() for consistency)
+# Dashboard function
 # -------------------------
 def main_dashboard():
     st.sidebar.title("Dashboard Menu")
     st.sidebar.write(f"Welcome, **{st.session_state['username']}**")
 
     if st.sidebar.button("Logout"):
-        st.session_state.clear()
-        st.rerun() # Use st.rerun() instead of st.experimental_rerun()
+        # This clears all keys, including 'logged_in' and 'username'
+        st.session_state.clear() 
+        st.rerun() # Forces the script to rerun from the top
 
     st.title("Foodpanda Sales Dashboard")
     st.write("Your dashboard content goes here…")
-    # ... (Add your dashboard code here) ...
 
 # -------------------------
-# App routing (Remains the same)
+# App routing (FIXED)
 # -------------------------
 def main():
-    if not st.session_state["logged_in"]:
+    # 💡 THE FIX: Use .get() to safely check the state.
+    # If 'logged_in' is missing (like after a logout/clear), it defaults to False,
+    # preventing the KeyError and correctly sending the user to the login page.
+    if not st.session_state.get("logged_in", False):
         login()
     else:
         main_dashboard()
 
 # -------------------------
-# Run app (Remains the same)
+# Run app
 # -------------------------
 if __name__ == "__main__":
     main()
-
-
-# In[ ]:
-
-
-
 
