@@ -4,7 +4,7 @@
 # In[1]:
 import streamlit as st
 import pandas as pd
-from pathlib import Path
+from pathlib import Path  # Crucial for the robust file path fix
 import altair as alt
 import numpy as np
 
@@ -139,16 +139,25 @@ def login():
                     st.error("Invalid username or password")
                     
 # -------------------------
-# Data Loading and Preparation Function
+# Data Loading and Preparation Function (FIXED PATH)
 # -------------------------
 @st.cache_data
 def load_data():
-    """Loads, cleans, and engineers features for the sales dashboard."""
+    """
+    Loads, cleans, and engineers features for the sales dashboard.
+    Uses pathlib to construct a path relative to the script's location 
+    to robustly handle "File Not Found" errors.
+    """
     
-    # Assuming 'dataset.csv' is in the same directory as this script.
-    DATA_FILE = "dataset.csv" 
+    # --- FIX: Use pathlib to get the absolute path relative to the script location ---
+    # This guarantees the file is found if it's in the same directory as the .py script.
+    DATA_FILE = Path(__file__).parent / "dataset.csv" 
 
     try:
+        # Check if the file exists before attempting to read it
+        if not DATA_FILE.exists():
+            raise FileNotFoundError(f"Data file not found at: {DATA_FILE.resolve()}")
+
         df = pd.read_csv(DATA_FILE) 
         
         # --- DATA CLEANING & FEATURE ENGINEERING ---
@@ -159,7 +168,7 @@ def load_data():
         df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
         
-        # Ensure 'item_name', 'category', and 'restaurant_name' are strings and handle NaNs for grouping
+        # Ensure text columns are clean
         df['item_name'] = df['item_name'].astype(str).fillna('Unknown Item')
         df['category'] = df['category'].astype(str).fillna('Unknown Category')
         df['restaurant_name'] = df['restaurant_name'].astype(str).fillna('Unknown Restaurant')
@@ -176,7 +185,6 @@ def load_data():
         return df
 
     except Exception as e:
-        # NOTE: This error message remains helpful if the file isn't found.
         st.error(f"Failed to load or process data. Error: {e}")
         return pd.DataFrame() 
 
@@ -471,7 +479,7 @@ def show_product_overview(df):
     with col_rating:
         st.subheader("⭐ Category Average Rating")
         
-        # Determine rating scale min/max for better visualization (if RATING_COL exists)
+        # Determine rating scale min/max for better visualization
         rating_scale_min = df[RATING_COL].min() * 0.9 if RATING_COL in df.columns and not df[RATING_COL].empty else 1
         rating_scale_max = df[RATING_COL].max() * 1.1 if RATING_COL in df.columns and not df[RATING_COL].empty else 5
 
@@ -492,7 +500,6 @@ def show_product_overview(df):
     restaurant_summary = df.groupby(RESTAURANT_COL).agg(
         Total_Sales=(SALES_COL, 'sum'),
         Avg_Rating=(RATING_COL, 'mean'),
-        # Assuming delivery_issues is 1 for issue, 0 for none, or count of non-null issues
         Delivery_Issues_Count=(ISSUES_COL, 'sum') 
     ).reset_index()
     restaurant_summary['Avg_Rating'] = restaurant_summary['Avg_Rating'].round(2)
@@ -556,7 +563,7 @@ def main_dashboard():
     
     df = load_data() 
     if df.empty:
-        # If data load failed, display the warning and stop execution
+        # If data load failed, display the warning/error message from load_data and stop execution
         return
 
     # --- Sidebar Setup ---
@@ -600,14 +607,12 @@ def main_dashboard():
 
 
     # --- Content Routing ---
-    # Only render content if the dataframe is NOT empty
-    if not df.empty:
-        if st.session_state["current_tab"] == "Sales Overview":
-            show_sales_overview(df)
-        elif st.session_state["current_tab"] == "Customer Overview":
-            show_customer_overview(df)
-        elif st.session_state["current_tab"] == "Product Overview":
-            show_product_overview(df)
+    if st.session_state["current_tab"] == "Sales Overview":
+        show_sales_overview(df)
+    elif st.session_state["current_tab"] == "Customer Overview":
+        show_customer_overview(df)
+    elif st.session_state["current_tab"] == "Product Overview":
+        show_product_overview(df)
 
 
 # -------------------------
