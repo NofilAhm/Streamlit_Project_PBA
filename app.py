@@ -16,7 +16,7 @@ if "current_tab" not in st.session_state:
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Styling and Readability (UPDATED with Aggressive Fix)
+# Custom CSS for Styling and Readability
 # -------------------------
 FOODPANDA_THEME = """
 <style>
@@ -31,7 +31,7 @@ FOODPANDA_THEME = """
     padding-top: 0px !important; 
 }
 
-/* 🚨 AGGRESSIVE FIX: Target the main content container to remove built-in padding */
+/* AGGRESSIVE FIX: Target the main content container to remove built-in padding */
 [data-testid="stVerticalBlock"] {
     padding-top: 0px !important;
     margin-top: 0px !important;
@@ -157,6 +157,7 @@ def load_data():
             
         df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
+        df['age'] = pd.to_numeric(df['age'], errors='coerce') # Ensure age is numeric
             
         df['sales'] = df['quantity'] * df['price']
         
@@ -228,7 +229,7 @@ def show_sales_overview(df):
         st.warning("Cannot generate monthly sales chart. Check 'order_date' and 'sales' columns.")
 
 def show_customer_overview(df):
-    """Generates the content for the Customer Overview tab, including KPIs."""
+    """Generates the content for the Customer Overview tab, including KPIs and Charts."""
     CUST_COL = 'customer_id' 
     PRICE_COL = 'sales'
     DATE_COL = 'order_date'
@@ -242,19 +243,13 @@ def show_customer_overview(df):
         total_customers = df[CUST_COL].nunique()
         total_revenue = df[PRICE_COL].sum()
         
-        # 1. Sales per Customer (Average Customer Value)
         sales_per_customer = total_revenue / total_customers if total_customers else 0
         
-        # 2. Customer Churn Rate (Approximation)
         present_date = df[DATE_COL].max()
-        
         last_order_df = df.groupby(CUST_COL)[DATE_COL].max().reset_index()
-
         last_order_df['days_since_last_order'] = (present_date - last_order_df[DATE_COL]).dt.days
-
         CHURN_THRESHOLD_DAYS = 180
         churned_customers = last_order_df[last_order_df['days_since_last_order'] > CHURN_THRESHOLD_DAYS][CUST_COL].count()
-
         churn_rate_percent = (churned_customers / total_customers) * 100 if total_customers else 0
         
         # --- KPI Display ---
@@ -274,6 +269,89 @@ def show_customer_overview(df):
             )
         
         st.write("---")
+
+        # --- Chart Section ---
+        st.header("Customer Demographics and Payment Analysis")
+        chart_col1, chart_col2 = st.columns(2)
+
+        # 1. Bar Chart: Payment Method Analysis (Left Column)
+        with chart_col1:
+            if 'payment_method' in df.columns and PRICE_COL in df.columns:
+                payment_sales = df.groupby('payment_method')[PRICE_COL].sum().reset_index()
+                payment_sales.columns = ['Payment Method', 'Total Sales']
+                
+                st.subheader("Total Sales by Payment Method")
+                
+                bar_chart = alt.Chart(payment_sales).mark_bar(color='#D70F64').encode(
+                    x=alt.X('Total Sales:Q', title='Total Revenue ($)'),
+                    y=alt.Y('Payment Method:N', title='Payment Method', sort='-x'),
+                    tooltip=['Payment Method', alt.Tooltip('Total Sales', format='$,.0f')]
+                ).properties(
+                    height=300
+                ).interactive()
+                st.altair_chart(bar_chart, use_container_width=True)
+            else:
+                st.info("Cannot show Payment Method chart. Missing 'payment_method' column.")
+
+
+        # 2. Pie Chart: Age Distribution (Right Column)
+        with chart_col2:
+            if 'age' in df.columns and CUST_COL in df.columns:
+                # Get unique customers and their age (handle potential nulls)
+                customer_age = df[[CUST_COL, 'age']].drop_duplicates(subset=[CUST_COL]).dropna(subset=['age'])
+                
+                if not customer_age.empty:
+                    
+                    # Define Bins for Age Groups
+                    # Ensure the max bin covers the maximum age in the data
+                    max_age = customer_age['age'].max()
+                    bins = [18, 25, 35, 45, 55, max_age + 1]
+                    labels = ['18-24', '25-34', '35-44', '45-54', '55+']
+                    
+                    customer_age['Age Group'] = pd.cut(
+                        customer_age['age'], 
+                        bins=bins, 
+                        labels=labels[:len(bins)-1], # Limit labels to number of resulting bins
+                        right=False, 
+                        include_lowest=True
+                    )
+                    
+                    age_counts = customer_age.groupby('Age Group')[CUST_COL].count().reset_index(name='Customer Count')
+                    
+                    st.subheader("Customer Distribution by Age Group")
+
+                    pie_chart = alt.Chart(age_counts).encode(
+                        theta=alt.Theta("Customer Count", stack=True)
+                    ).properties(
+                        title=None
+                    )
+                    
+                    color_scale = alt.Scale(range=['#D70F64', '#FF5A93', '#FF8CC6', '#6A053F', '#9C0A52'])
+
+                    # Draw the arcs (pie slices)
+                    arc = pie_chart.mark_arc(outerRadius=120, innerRadius=30).encode(
+                        color=alt.Color("Age Group:N", scale=color_scale),
+                        order=alt.Order("Customer Count", sort="descending"),
+                        tooltip=["Age Group", "Customer Count"]
+                    )
+                    
+                    # Add text labels
+                    text = pie_chart.mark_text(radius=140).encode(
+                        text=alt.Text("Customer Count"),
+                        order=alt.Order("Customer Count", sort="descending"),
+                        color=alt.value("black") 
+                    )
+
+                    final_pie = arc + text
+                    
+                    st.altair_chart(final_pie, use_container_width=True)
+                    
+                else:
+                    st.info("Age data is missing or empty for unique customers.")
+            else:
+                st.info("Cannot show Age Distribution chart. Missing 'age' or 'customer_id' column.")
+        
+        st.write("---") # Separator below the charts
     else:
         st.warning("Customer KPIs cannot be calculated. Ensure 'customer_id', 'sales', and 'order_date' columns exist.")
 
