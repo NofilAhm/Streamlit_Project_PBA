@@ -10,9 +10,8 @@ from pathlib import Path
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Reliable Styling
+# Custom CSS for Reliable Styling and Readability
 # -------------------------
-# This CSS is designed to be highly specific to fix the input box readability.
 FOODPANDA_THEME = """
 <style>
 /* 1. MAIN BACKGROUND: Transparent Foodpanda Pink */
@@ -27,26 +26,26 @@ FOODPANDA_THEME = """
 }
 
 /* 3. INPUT FIELD STYLING: FIXING READABILITY */
-/* Target the immediate container around the input */
+/* Target the immediate container around the input for a light background */
 .stTextInput > div:first-child {
     background-color: white !important; /* Solid white background for clear readability */
     border-radius: 0.25rem; 
     padding: 0.5rem; 
 }
 
-/* Targets the actual input element */
+/* Targets the actual input element: Black text over white background */
 .stTextInput > div > div > input {
-    color: black !important; /* Input text is BLACK */
-    background-color: transparent !important; /* Make the input field transparent to show white container */
+    color: black !important; 
+    background-color: transparent !important; 
     border: none !important; 
 }
 
-/* 4. Ensure input labels (Username/Password) are white */
-.stTextInput > label {
+/* 4. Ensure input labels and titles are visible */
+.stTextInput > label, h1, h2, h3, h4, .stMarkdown {
     color: white !important;
 }
 
-/* 5. General Styling for Buttons and Titles */
+/* 5. General Button Styling */
 .stButton > button {
     background-color: #FFFFFF;
     border: 1px solid #D70F64;
@@ -57,13 +56,8 @@ FOODPANDA_THEME = """
     background-color: #FF5A93;
     color: white !important; 
 }
-h1, h2, h3, h4, .stMarkdown {
-    color: white !important;
-}
 </style>
 """
-
-# Apply the custom CSS
 st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
 
 # -------------------------
@@ -89,7 +83,6 @@ def login():
     col1, col2, col3 = st.columns([1, 1, 1]) 
     
     with col2:
-        # Placeholder for Image: Use a public URL for reliable loading
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Foodpanda_logo.svg/320px-Foodpanda_logo.svg.png", 
                  width=100) 
 
@@ -110,45 +103,60 @@ def login():
                     st.error("Invalid username or password")
                     
 # -------------------------
-# Data Loading Function (FIXED PATH)
+# Data Loading and Preparation Function (ROBUST & CLEANED)
 # -------------------------
 @st.cache_data
 def load_data():
-    """Loads the CSV data using an absolute path relative to the script location."""
+    """Loads, cleans, and engineers features for the sales dashboard."""
     
     # 🚨 FIX: Use pathlib to construct the absolute path relative to app.py
+    # Assumes file is named EXACTLY 'dataset' and is in the same folder.
     DATA_FILE = Path(__file__).parent / "dataset" 
 
     try:
+        # Read the file assuming it's a CSV format
         df = pd.read_csv(DATA_FILE)
         
-        # -------------------
-        # DATA PREP PLACEHOLDER
-        # -------------------
-        # Example: Convert relevant columns to correct types
-        # if 'OrderDate' in df.columns:
-        #     df['OrderDate'] = pd.to_datetime(df['OrderDate'], errors='coerce')
-
+        # --- DATA CLEANING & FEATURE ENGINEERING ---
+        
+        # 1. Date Conversions
+        DATE_COLUMNS = ['signup_date', 'order_date', 'last_order_date', 'rating_date']
+        for col in DATE_COLUMNS:
+            df[col] = pd.to_datetime(df[col], errors='coerce')
+            
+        # 2. Ensure Price and Quantity are numeric
+        df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
+        df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
+            
+        # 3. Calculate Sales (Revenue per item)
+        df['sales'] = df['quantity'] * df['price']
+        
+        # 4. Create Time-Based Features for Charts
+        df['Order_Day'] = df['order_date'].dt.normalize() # Day only (no time component)
+        df['Order_Month'] = df['order_date'].dt.to_period('M').astype(str)
+        df['DayOfWeek'] = df['order_date'].dt.day_name()
+        
+        # 5. Drop rows where essential data is missing
+        df.dropna(subset=['order_id', 'order_date', 'sales'], inplace=True)
+        
         return df
 
     except Exception as e:
-        st.error(f"Failed to load data from {DATA_FILE}. Please ensure 'dataset.csv' is in the same folder as app.py.")
-        # st.exception(e) # Uncomment this if you want to see the full Python error
-        return pd.DataFrame() # Return empty DataFrame on failure
+        # This will display the error if the file isn't found or parsing fails
+        st.error(f"Failed to load or process data from '{DATA_FILE}'. Error: {e}")
+        return pd.DataFrame() 
 
 # -------------------------
-# Dashboard function (KPIs Included)
+# Dashboard function
 # -------------------------
 def main_dashboard():
     # Reset background theme for the main dashboard content area
     st.markdown("""
         <style>
-        /* Reset main area to solid white */
         [data-testid="stAppViewContainer"] {
             background-color: white !important; 
             color: #333333 !important;
         }
-        /* Keep sidebar pink */
         [data-testid="stSidebar"] {
             background-color: rgba(215, 15, 100, 0.8) !important;
         }
@@ -167,27 +175,22 @@ def main_dashboard():
     # Load the data
     df = load_data() 
     
-    # Check if the DataFrame loaded successfully
     if df.empty:
-        st.warning("Cannot display dashboard content without data.")
+        st.warning("Data loading failed. Please check file path and data format.")
         return
 
     # ------------------------------------
     # KPI Implementation
     # ------------------------------------
-    ORDER_COL = 'Order ID'  # 🚨 REPLACE with your actual Order ID column name
-    PRICE_COL = 'Total Price'     # 🚨 REPLACE with your actual Price/Amount column name
+    # 🚨🚨🚨 UPDATE THESE COLUMN NAMES TO MATCH YOUR CSV EXACTLY 🚨🚨🚨
+    ORDER_COL = 'order_id' 
+    PRICE_COL = 'sales'     # Using the calculated 'sales' column for total revenue
 
     if ORDER_COL in df.columns and PRICE_COL in df.columns:
         
-        # Data Cleaning for calculation robustness
-        df_clean = df.dropna(subset=[ORDER_COL, PRICE_COL]).copy()
-        # Ensure Price column is numeric (important for calculation)
-        df_clean[PRICE_COL] = pd.to_numeric(df_clean[PRICE_COL], errors='coerce').fillna(0) 
-
         # Calculate metrics
-        total_revenue = df_clean[PRICE_COL].sum()
-        total_orders = df_clean[ORDER_COL].nunique()
+        total_revenue = df[PRICE_COL].sum()
+        total_orders = df[ORDER_COL].nunique()
         average_order_value = total_revenue / total_orders if total_orders else 0
         
         st.header("Key Performance Indicators (KPIs) for All Time")
@@ -215,7 +218,7 @@ def main_dashboard():
         st.write("---")
     
     else:
-        st.warning(f"Required columns ('{ORDER_COL}' or '{PRICE_COL}') not found in the dataset. Please update the column names in the code.")
+        st.warning(f"Required columns ('{ORDER_COL}' or '{PRICE_COL}') not found after data loading. Check your file.")
         
     # Display raw data preview 
     st.subheader("Raw Data Preview")
