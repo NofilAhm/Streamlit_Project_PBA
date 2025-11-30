@@ -139,7 +139,7 @@ def login():
                     st.error("Invalid username or password")
                     
 # -------------------------
-# Data Loading and Preparation Function (UPDATED)
+# Data Loading and Preparation Function
 # -------------------------
 @st.cache_data
 def load_data():
@@ -158,8 +158,7 @@ def load_data():
         df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
         
-        # 🚨 FIX: Removed pd.to_numeric for 'age' since it holds text-based age groups
-        # df['age'] = pd.to_numeric(df['age'], errors='coerce') 
+        # Age column is treated as text/categorical data (Age Groups)
             
         df['sales'] = df['quantity'] * df['price']
         
@@ -176,7 +175,7 @@ def load_data():
         return pd.DataFrame() 
 
 # -------------------------
-# Tab Content Functions (UPDATED)
+# Tab Content Functions
 # -------------------------
 
 def show_sales_overview(df):
@@ -235,14 +234,14 @@ def show_customer_overview(df):
     CUST_COL = 'customer_id' 
     PRICE_COL = 'sales'
     DATE_COL = 'order_date'
-    AGE_GROUP_COL = 'age' # Renamed for clarity in this function, but using 'age' column
+    AGE_GROUP_COL = 'age' 
 
     st.title("Customer Overview Dashboard 👥")
     st.write("---")
     
     if CUST_COL in df.columns and PRICE_COL in df.columns and DATE_COL in df.columns:
         
-        # --- KPI Calculations (remains unchanged) ---
+        # --- KPI Calculations ---
         total_customers = df[CUST_COL].nunique()
         total_revenue = df[PRICE_COL].sum()
         
@@ -301,23 +300,21 @@ def show_customer_overview(df):
         with chart_col2:
             if AGE_GROUP_COL in df.columns and CUST_COL in df.columns:
                 
-                # 🚨 FIX: Group by the text Age Group directly. Drop rows where AGE is blank.
+                # Group by the text Age Group directly. Drop rows where AGE is blank.
                 customer_age = df[[CUST_COL, AGE_GROUP_COL]].drop_duplicates(subset=[CUST_COL]).dropna(subset=[AGE_GROUP_COL])
                 
                 if not customer_age.empty:
                     
                     # Count Customers per Age Group
-                    # Rename the age column to 'Age Group' for the chart title/legend
                     age_counts = customer_age.groupby(AGE_GROUP_COL)[CUST_COL].count().reset_index()
                     age_counts.columns = ['Age Group', 'Customer Count']
                     
                     st.subheader("Customer Distribution by Age Group")
 
+                    # 🚨 FIX: Removed the problematic .properties(title=None) block
                     pie_chart = alt.Chart(age_counts).encode(
                         theta=alt.Theta("Customer Count", stack=True)
-                    ).properties(
-                        title=None
-                    )
+                    ) 
                     
                     # Custom color scheme for Foodpanda theme
                     color_scale = alt.Scale(range=['#D70F64', '#FF5A93', '#FF8CC6', '#6A053F', '#9C0A52'])
