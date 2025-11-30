@@ -11,20 +11,18 @@ import altair as alt
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Styling and Readability (UPDATED)
+# Custom CSS for Styling and Readability (UPDATED SIDEBAR STYLES)
 # -------------------------
 FOODPANDA_THEME = """
 <style>
 /* 1. MAIN BACKGROUND: Transparent Foodpanda Pink */
 [data-testid="stAppViewContainer"] {
     background-color: rgba(215, 15, 100, 0.8) !important; 
-    /* 🚨 FIX: Change text color on the pink background to the brand pink */
     color: #D70F64 !important; 
 }
 
-/* 2. PUSH CONTENT DOWN (Top Space Reduction) */
+/* 2. PUSH CONTENT DOWN (Top Space Reduction on Main Content) */
 [data-testid="stApp"] {
-    /* 🚨 FIX: Reduced padding from 80px to 20px (approx 2 inch reduction) */
     padding-top: 20px !important; 
 }
 
@@ -42,7 +40,7 @@ FOODPANDA_THEME = """
 
 /* 4. Ensure input labels and titles are visible (Set to brand pink on pink background) */
 .stTextInput > label, h1, h2, h3, h4, .stMarkdown {
-    color: #D70F64 !important; /* 🚨 FIX: Set to brand pink for visibility */
+    color: #D70F64 !important; 
 }
 
 /* 5. General Button Styling */
@@ -68,6 +66,23 @@ FOODPANDA_THEME = """
     font-weight: bold !important; 
     color: #333333 !important; 
 }
+
+/* 🚨 NEW FIX: Sidebar Styling for Spacing and Font Color */
+/* Target the overall sidebar container for reduced space */
+[data-testid="stSidebar"] > div:first-child {
+    /* Reduced padding-top to bring content up (approx 1 inch reduction) */
+    padding-top: 10px !important; 
+}
+
+/* Target the text elements inside the sidebar for white color */
+[data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, 
+[data-testid="stSidebar"] h3, 
+[data-testid="stSidebar"] h4, 
+[data-testid="stSidebar"] .stMarkdown {
+    color: white !important;
+}
+
 </style>
 """
 st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
@@ -151,7 +166,7 @@ def load_data():
         return pd.DataFrame() 
 
 # -------------------------
-# Dashboard function (UNCHANGED logic)
+# Dashboard function
 # -------------------------
 def main_dashboard():
     # Reset background theme for the main dashboard content area
@@ -167,8 +182,10 @@ def main_dashboard():
         </style>
         """, unsafe_allow_html=True)
     
+    # 🚨 NOTE: The font color is now controlled by the CSS above, 
+    # but we will use Markdown to ensure the welcome message is rendered correctly.
     st.sidebar.title("Dashboard Menu")
-    st.sidebar.write(f"Welcome, **{st.session_state['username']}**")
+    st.sidebar.markdown(f"**Welcome, {st.session_state['username']}**") # Use markdown for bold and color control
     if st.sidebar.button("Logout"):
         st.session_state.clear() 
         st.rerun() 
@@ -184,7 +201,7 @@ def main_dashboard():
         return
 
     # ------------------------------------
-    # KPI Implementation
+    # KPI Implementation (UNCHANGED)
     # ------------------------------------
     ORDER_COL = 'order_id' 
     PRICE_COL = 'sales'
@@ -195,7 +212,6 @@ def main_dashboard():
         total_orders = df[ORDER_COL].nunique()
         average_order_value = total_revenue / total_orders if total_orders else 0
         
-        # ADDED SECTION HEADING
         st.header("Sales Overview")
         st.subheader("Key Performance Indicators (KPIs) for All Time")
         
@@ -211,21 +227,17 @@ def main_dashboard():
         st.write("---")
     
     # ------------------------------------
-    # MONTH-WISE SALES CHART
+    # MONTH-WISE SALES CHART (UNCHANGED)
     # ------------------------------------
     if 'order_date' in df.columns and PRICE_COL in df.columns:
         st.subheader("Monthly Revenue Trend (Month and Year)")
         
-        # 1. Prepare data for charting: Get the first day of the month as a proper datetime object
         df['Order_Month_Date'] = df['order_date'].dt.to_period('M').dt.start_time
         
-        # 2. Group the data by the new month-date field and sum the sales
         monthly_sales = df.groupby('Order_Month_Date')[PRICE_COL].sum().reset_index()
         monthly_sales.columns = ['Month', 'Total Sales']
 
-        # 3. Create the Altair Line Chart
         chart = alt.Chart(monthly_sales).mark_line(point=True, color='#D70F64').encode(
-            # Use a Temporal type (:T) for the x-axis with custom formatting
             x=alt.X('Month:T', 
                     axis=alt.Axis(
                         title='Month and Year',
@@ -236,14 +248,14 @@ def main_dashboard():
             tooltip=[alt.Tooltip('Month', format='%b %Y'), alt.Tooltip('Total Sales', format='$,.2f')]
         ).properties(
             title='Monthly Revenue Over Time'
-        ).interactive() # Allow zoom/pan
+        ).interactive() 
         
         st.altair_chart(chart, use_container_width=True)
         st.write("---")
     else:
         st.warning("Cannot generate monthly sales chart. Check 'order_date' and 'sales' columns.")
 
-    # Display raw data preview 
+    # Display raw data preview (UNCHANGED)
     st.subheader("Raw Data Preview")
     st.write(f"Rows: **{df.shape[0]}**, Columns: **{df.shape[1]}**")
     st.dataframe(df.head(), use_container_width=True)
