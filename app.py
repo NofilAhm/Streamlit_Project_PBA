@@ -10,8 +10,8 @@ import streamlit as st
 # Hardcoded users
 # -------------------------
 USERS = {
-    "nofil": "12345",
-    "admin": "admin123"
+    "nofil": "Longine96",
+    "admin": "Longine96"
 }
 
 # -------------------------
@@ -26,7 +26,7 @@ if "username" not in st.session_state:
 # Login function
 # -------------------------
 def login():
-    st.title("Login Page")
+    st.title("FOODPANDA SALES DASHBOARD")
     
     username = st.text_input("Username", key="login_user")
     password = st.text_input("Password", type="password", key="login_pass")
