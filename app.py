@@ -8,18 +8,17 @@ import streamlit as st
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Foodpanda Theme (MORE AGGRESSIVE)
+# Custom CSS for Foodpanda Theme (Revised Text Color)
 # -------------------------
 FOODPANDA_THEME = """
 <style>
 /* 1. AGGRESSIVE BACKGROUND COLOR FIX (20% transparent Foodpanda Pink) */
 [data-testid="stAppViewContainer"] {
     background-color: rgba(215, 15, 100, 0.8) !important; 
-    color: white !important; 
+    color: white !important; /* General text remains white for contrast */
 }
 
 /* 2. CENTER THE MAIN CONTENT VERTICALLY AND HORIZONTALLY */
-/* Adjust main block position to simulate moving down */
 [data-testid="stApp"] {
     padding-top: 80px; /* Pushes content down about 1.5 inches */
 }
@@ -27,7 +26,7 @@ FOODPANDA_THEME = """
 /* 3. INPUT FIELD STYLING */
 /* Targets the actual input element */
 .stTextInput > div > div > input {
-    color: white !important; /* Forces input text to be white */
+    color: black !important; /* 💡 FIX: Forces input text to be BLACK */
     background-color: transparent !important; /* Makes input field background transparent */
     border: 1px solid white !important; 
 }
@@ -77,7 +76,7 @@ if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 # -------------------------
-# Login function (SLIGHTLY SIMPLIFIED LAYOUT)
+# Login function (UNCHANGED)
 # -------------------------
 def login():
     # Create a layout with columns to center the login box
@@ -105,7 +104,7 @@ def login():
                     st.error("Invalid username or password")
                     
 # -------------------------
-# Dashboard function
+# Dashboard function (UNCHANGED)
 # -------------------------
 def main_dashboard():
     # RESET THEME FOR DASHBOARD CONTENT
@@ -134,7 +133,7 @@ def main_dashboard():
     st.write("Your dashboard content goes here…")
 
 # -------------------------
-# App routing 
+# App routing (UNCHANGED)
 # -------------------------
 def main():
     if not st.session_state.get("logged_in", False):
@@ -143,7 +142,7 @@ def main():
         main_dashboard()
 
 # -------------------------
-# Run app
+# Run app (UNCHANGED)
 # -------------------------
 if __name__ == "__main__":
     main()
