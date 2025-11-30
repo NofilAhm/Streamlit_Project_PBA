@@ -149,15 +149,20 @@ def load_data():
     to robustly handle "File Not Found" errors.
     """
     
-    # --- FIX: Use pathlib to get the absolute path relative to the script location ---
-    # This guarantees the file is found if it's in the same directory as the .py script.
+    # --- Robust Path Resolution ---
+    # This attempts to find the file relative to the script's location.
     DATA_FILE = Path(__file__).parent / "dataset.csv" 
 
     try:
         # Check if the file exists before attempting to read it
         if not DATA_FILE.exists():
-            raise FileNotFoundError(f"Data file not found at: {DATA_FILE.resolve()}")
+            # FALLBACK check for environments where the CWD is the project root
+            DATA_FILE = Path("dataset.csv") 
+            if not DATA_FILE.exists():
+                 # Final detailed error message if both paths fail
+                 raise FileNotFoundError(f"Data file not found after checking script location and CWD. Checked paths: {Path(__file__).parent / 'dataset.csv'} and {Path('dataset.csv').resolve()}")
 
+        print(f"Attempting to load data from: {DATA_FILE.resolve()}") # Log the final path
         df = pd.read_csv(DATA_FILE) 
         
         # --- DATA CLEANING & FEATURE ENGINEERING ---
