@@ -27,7 +27,8 @@ FOODPANDA_THEME = """
 
 /* 2. PUSH CONTENT DOWN (Top Space Reduction on Main Content) */
 [data-testid="stApp"] {
-    padding-top: 20px !important; 
+    /* 🚨 FIX: Reduced padding from 20px to 0px for maximum space reduction */
+    padding-top: 0px !important; 
 }
 
 /* 3. INPUT FIELD STYLING: FIXING READABILITY (White Box, Black Text) */
@@ -43,6 +44,7 @@ FOODPANDA_THEME = """
 }
 
 /* 4. Ensure input labels and titles are visible (Set to brand pink on pink background) */
+/* This rule affects the main dashboard area text */
 .stTextInput > label, h1, h2, h3, h4, .stMarkdown {
     color: #D70F64 !important; 
 }
@@ -83,7 +85,13 @@ FOODPANDA_THEME = """
     color: white !important; /* White font color */
 }
 
-/* The styling for the active tab button will be applied dynamically in Python */
+/* 🚨 NEW FIX: Login Dashboard Title Styling (White text on pink background) */
+.login-title {
+    color: white !important; 
+    text-align: center;
+    font-size: 2em;
+    font-weight: bold;
+}
 
 </style>
 """
@@ -103,16 +111,17 @@ if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 # -------------------------
-# Login function
+# Login function (UPDATED)
 # -------------------------
 def login():
     col1, col2, col3 = st.columns([1, 1, 1]) 
     
     with col2:
-        st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Foodpanda_logo.svg/320px-Foodpanda_logo.svg.png", 
-                 width=100) 
+        # 🚨 FIX: Image removed as requested
+        # st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Foodpanda_logo.svg/320px-Foodpanda_logo.svg.png", width=100) 
 
-        st.markdown("<h2 style='text-align: center;'>Dashboard Login</h2>", unsafe_allow_html=True)
+        # 🚨 FIX: Updated heading text and applied white color using CSS class
+        st.markdown("<h2 class='login-title'>FOODPANDA SALES DASHBOARD</h2>", unsafe_allow_html=True)
         
         with st.container(border=True): 
             username = st.text_input("Username", key="login_user")
@@ -230,7 +239,7 @@ def show_product_overview(df):
 
 
 # -------------------------
-# Main Dashboard Function (FIXED ROUTING LOGIC)
+# Main Dashboard Function
 # -------------------------
 def main_dashboard():
     # Reset background theme for the main dashboard content area
@@ -263,23 +272,19 @@ def main_dashboard():
     st.sidebar.markdown("---")
     st.sidebar.subheader("Navigation")
     
-    # --- Tab Buttons (STABLE LOGIC) ---
+    # --- Tab Buttons ---
     TAB_NAMES = ["Sales Overview", "Customer Overview", "Product Overview"]
     current_tab = st.session_state["current_tab"]
     
-    # Function to create a standard Streamlit button and apply custom styling based on state
     def nav_button(label, current_tab):
-        # 1. Check if the button is clicked
         if st.sidebar.button(label, use_container_width=True, key=f"nav_{label}"):
             st.session_state["current_tab"] = label
             st.rerun()
             
-        # 2. If it's the current active tab, inject CSS to change its appearance
         if current_tab == label:
             st.sidebar.markdown(
                 f"""
                 <style>
-                    /* Target the specific button by its key (used in st.button) */
                     [data-testid="stSidebar"] button[kind="secondary"][key="nav_{label}"] {{
                         background-color: white !important;
                         color: #D70F64 !important;
@@ -291,7 +296,6 @@ def main_dashboard():
                 unsafe_allow_html=True,
             )
 
-    # Render the navigation buttons using the stable function
     for tab in TAB_NAMES:
         nav_button(tab, current_tab)
 
