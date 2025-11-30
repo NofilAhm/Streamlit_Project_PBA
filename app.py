@@ -117,7 +117,7 @@ def load_data():
     """Loads the CSV data using an absolute path relative to the script location."""
     
     # 🚨 FIX: Use pathlib to construct the absolute path relative to app.py
-    DATA_FILE = Path(__file__).parent / "dataset.csv" 
+    DATA_FILE = Path(__file__).parent / "dataset" 
 
     try:
         df = pd.read_csv(DATA_FILE)
