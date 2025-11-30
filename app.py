@@ -320,7 +320,7 @@ def show_customer_overview(df):
                     color_scale = alt.Scale(range=['#D70F64', '#FF5A93', '#FF8CC6', '#6A053F', '#9C0A52'])
 
                     # Draw the arcs (pie slices) - Adjusted outerRadius for better spacing
-                    arc = pie_chart.mark_arc(outerRadius=130, innerRadius=30).encode( # Outer radius adjusted
+                    arc = pie_chart.mark_arc(outerRadius=140, innerRadius=30).encode( # 🚨 FIX: outerRadius increased to 140
                         color=alt.Color("Age Group:N", scale=color_scale),
                         order=alt.Order("Customer Count", sort="descending"),
                         tooltip=[
@@ -335,8 +335,8 @@ def show_customer_overview(df):
                         lambda row: f"{row['Customer Count']} ({row['Percentage']:.1f}%)", axis=1
                     )
                     
-                    # Text labels: Radius increased to 155 to push labels further out for separation
-                    text = alt.Chart(age_counts).mark_text(radius=155, fill="black", fontSize=14).encode( # Radius adjusted
+                    # Text labels: Radius increased to 165 to push labels further out for separation
+                    text = alt.Chart(age_counts).mark_text(radius=165, fill="black", fontSize=14).encode( # 🚨 FIX: Radius increased to 165
                         text=alt.Text("formatted_label:N"),
                         order=alt.Order("Customer Count", sort="descending"),
                         color=alt.value("black")
