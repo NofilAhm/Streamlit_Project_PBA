@@ -2,7 +2,6 @@
 # coding: utf-8
 
 # In[1]:
-
 import streamlit as st
 # ... (USERS and session state initialization remains the same) ...
 
@@ -59,14 +58,6 @@ def main():
 # -------------------------
 if __name__ == "__main__":
     main()
-
-# -------------------------
-# Run app
-# -------------------------
-if __name__ == "__main__":
-    main()
-
-
 # In[ ]:
 
 
