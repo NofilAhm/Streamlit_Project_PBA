@@ -5,7 +5,15 @@
 import pandas as pd
 from pathlib import Path
 import altair as alt
+import streamlit as st # ⬅️ THIS LINE IS ESSENTIAL
+import pandas as pd
+from pathlib import Path
+import altair as alt
 
+# Set the page configuration to wide layout
+st.set_page_config(layout="wide") 
+
+# ... (Rest of your code follows) ...
 # Set the page configuration to wide layout
 st.set_page_config(layout="wide") 
 
