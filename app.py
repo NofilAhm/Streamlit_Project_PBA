@@ -7,33 +7,40 @@
 import streamlit as st
 
 # -------------------------
-# Hardcoded users (can expand later)
+# Hardcoded users
 # -------------------------
 USERS = {
-    "nofil": "12345",   # username: password
+    "nofil": "12345",
     "admin": "admin123"
 }
+
+# -------------------------
+# Initialize session state
+# -------------------------
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+if "username" not in st.session_state:
+    st.session_state["username"] = ""
 
 # -------------------------
 # Login function
 # -------------------------
 def login():
     st.title("Login Page")
-
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    username = st.text_input("Username", key="login_user")
+    password = st.text_input("Password", type="password", key="login_pass")
 
     if st.button("Login"):
         if username in USERS and USERS[username] == password:
             st.session_state["logged_in"] = True
             st.session_state["username"] = username
             st.success("Logged in successfully!")
-            st.experimental_rerun()
+            st.experimental_rerun()  # this will reload the app properly
         else:
             st.error("Invalid username or password")
 
 # -------------------------
-# Main protected dashboard
+# Dashboard function
 # -------------------------
 def main_dashboard():
     st.sidebar.title("Dashboard Menu")
@@ -44,50 +51,21 @@ def main_dashboard():
         st.experimental_rerun()
 
     st.title("Sales Dashboard")
-    st.write("Your dashboard goes here...")
+    st.write("Your dashboard content goes here…")
+    # You can add charts, KPIs, filters here
 
 # -------------------------
-# Page router
+# App routing
 # -------------------------
 def main():
-    if "logged_in" not in st.session_state:
+    if not st.session_state["logged_in"]:
         login()
     else:
         main_dashboard()
 
-if __name__ == "__main__":
-    main()
-
-
-# app.py
-import streamlit as st
-from login_module import login  # your login code in a separate file
-
-# --------------------------
-# Main dashboard function
-# --------------------------
-def main_dashboard():
-    st.sidebar.title("Dashboard Menu")
-    st.sidebar.write(f"Welcome, **{st.session_state['username']}**")
-
-    # Logout button
-    if st.sidebar.button("Logout"):
-        st.session_state.clear()
-        st.experimental_rerun()
-
-    st.title("Sales Dashboard")
-    st.write("This is your main dashboard content…")
-    st.write("You can add charts, KPIs, filters here.")
-
-# --------------------------
-# Routing logic
-# --------------------------
-def main():
-    if "logged_in" not in st.session_state:
-        login()  # show login page
-    else:
-        main_dashboard()  # show dashboard
-
+# -------------------------
+# Run app
+# -------------------------
 if __name__ == "__main__":
     main()
 
