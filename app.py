@@ -16,7 +16,7 @@ if "current_tab" not in st.session_state:
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Styling and Readability
+# Custom CSS for Styling and Readability (UPDATED with Aggressive Fix)
 # -------------------------
 FOODPANDA_THEME = """
 <style>
@@ -29,6 +29,12 @@ FOODPANDA_THEME = """
 /* 2. PUSH CONTENT DOWN (Top Space Reduction on Main Content) */
 [data-testid="stApp"] {
     padding-top: 0px !important; 
+}
+
+/* 🚨 AGGRESSIVE FIX: Target the main content container to remove built-in padding */
+[data-testid="stVerticalBlock"] {
+    padding-top: 0px !important;
+    margin-top: 0px !important;
 }
 
 /* 3. INPUT FIELD STYLING: FIXING READABILITY (White Box, Black Text) */
@@ -227,7 +233,6 @@ def show_customer_overview(df):
     PRICE_COL = 'sales'
     DATE_COL = 'order_date'
 
-    # 🚨 FIX: Moved title up by removing any preceding space/markdown
     st.title("Customer Overview Dashboard 👥")
     st.write("---")
     
@@ -254,7 +259,6 @@ def show_customer_overview(df):
         
         # --- KPI Display ---
         st.header("Customer KPIs")
-        # 🚨 FIX: Subheader removed as requested
         
         kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
         
