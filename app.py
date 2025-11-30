@@ -296,41 +296,60 @@ def show_customer_overview(df):
                 st.info("Cannot show Payment Method chart. Missing 'payment_method' column.")
 
 
-        # 2. Pie Chart: Age Distribution (Right Column) - FIXED
+        # 2. Pie Chart: Age Distribution (Right Column) - ENHANCED
         with chart_col2:
             if AGE_GROUP_COL in df.columns and CUST_COL in df.columns:
                 
-                # Group by the text Age Group directly. Drop rows where AGE is blank.
                 customer_age = df[[CUST_COL, AGE_GROUP_COL]].drop_duplicates(subset=[CUST_COL]).dropna(subset=[AGE_GROUP_COL])
                 
                 if not customer_age.empty:
                     
-                    # Count Customers per Age Group
                     age_counts = customer_age.groupby(AGE_GROUP_COL)[CUST_COL].count().reset_index()
                     age_counts.columns = ['Age Group', 'Customer Count']
                     
+                    # 🚨 NEW: Calculate Percentage
+                    total_customers_in_chart = age_counts['Customer Count'].sum()
+                    age_counts['Percentage'] = (age_counts['Customer Count'] / total_customers_in_chart) * 100
+                    
                     st.subheader("Customer Distribution by Age Group")
 
-                    # 🚨 FIX: Removed the problematic .properties(title=None) block
                     pie_chart = alt.Chart(age_counts).encode(
                         theta=alt.Theta("Customer Count", stack=True)
                     ) 
                     
-                    # Custom color scheme for Foodpanda theme
                     color_scale = alt.Scale(range=['#D70F64', '#FF5A93', '#FF8CC6', '#6A053F', '#9C0A52'])
 
-                    # Draw the arcs (pie slices)
                     arc = pie_chart.mark_arc(outerRadius=120, innerRadius=30).encode(
                         color=alt.Color("Age Group:N", scale=color_scale),
                         order=alt.Order("Customer Count", sort="descending"),
-                        tooltip=["Age Group", "Customer Count"]
+                        tooltip=["Age Group", "Customer Count", alt.Tooltip('Percentage', format='.2f') + '%'] # Add percentage to tooltip
                     )
                     
-                    # Add text labels
-                    text = pie_chart.mark_text(radius=140).encode(
-                        text=alt.Text("Customer Count"),
+                    # 🚨 ENHANCEMENT: Increase text size and add percentage to labels
+                    text = pie_chart.mark_text(radius=140, fill="black").encode( # Set fill to black for better contrast
+                        text=alt.Text("Percentage", format=".1f"), # Display percentage with one decimal
                         order=alt.Order("Customer Count", sort="descending"),
-                        color=alt.value("black") 
+                        color=alt.value("black"), # Ensure text color is visible
+                        # 🚨 NEW: Adjust font size for the labels
+                        # This requires setting the property on the text mark itself or using mark_text's properties
+                    )
+
+                    # For explicit text formatting (e.g., adding '%' sign directly on the chart)
+                    # We need to create a combined text field
+                    text_labels = pie_chart.mark_text(radius=140, fontSize=14).encode( # 🚨 NEW: fontSize
+                        text=alt.Text("formatted_label:N", format="s"), # Use a formatted string
+                        order=alt.Order("Customer Count", sort="descending"),
+                        color=alt.value("black")
+                    )
+                    # Create a new column with combined count and percentage for labels
+                    age_counts['formatted_label'] = age_counts.apply(
+                        lambda row: f"{row['Customer Count']} ({row['Percentage']:.1f}%)", axis=1
+                    )
+                    
+                    text = alt.Chart(age_counts).mark_text(radius=140, fill="black", fontSize=14).encode(
+                        text=alt.Text("formatted_label:N"),
+                        order=alt.Order("Customer Count", sort="descending"),
+                        color=alt.value("black")
                     )
 
                     final_pie = arc + text
