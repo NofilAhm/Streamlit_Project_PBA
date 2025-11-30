@@ -6,7 +6,7 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 import altair as alt
-import numpy as np # Needed for numerical operations
+import numpy as np
 
 # Initialize session state for navigation
 if "current_tab" not in st.session_state:
@@ -116,7 +116,6 @@ def login():
     col1, col2, col3 = st.columns([1, 1, 1]) 
     
     with col2:
-        # Updated heading text and applied white color using CSS class
         st.markdown("<h2 class='login-title'>FOODPANDA SALES DASHBOARD</h2>", unsafe_allow_html=True)
         
         with st.container(border=True): 
@@ -228,6 +227,7 @@ def show_customer_overview(df):
     PRICE_COL = 'sales'
     DATE_COL = 'order_date'
 
+    # 🚨 FIX: Moved title up by removing any preceding space/markdown
     st.title("Customer Overview Dashboard 👥")
     st.write("---")
     
@@ -243,22 +243,18 @@ def show_customer_overview(df):
         # 2. Customer Churn Rate (Approximation)
         present_date = df[DATE_COL].max()
         
-        # Find last order date for each customer
         last_order_df = df.groupby(CUST_COL)[DATE_COL].max().reset_index()
 
-        # Calculate days since last order
         last_order_df['days_since_last_order'] = (present_date - last_order_df[DATE_COL]).dt.days
 
-        # Define churned as no order in the last 180 days (6 months)
         CHURN_THRESHOLD_DAYS = 180
         churned_customers = last_order_df[last_order_df['days_since_last_order'] > CHURN_THRESHOLD_DAYS][CUST_COL].count()
 
-        # Calculate churn rate percentage
         churn_rate_percent = (churned_customers / total_customers) * 100 if total_customers else 0
         
         # --- KPI Display ---
         st.header("Customer KPIs")
-        st.subheader(f"Metrics calculated based on a dataset end date of: {present_date.strftime('%Y-%m-%d')}")
+        # 🚨 FIX: Subheader removed as requested
         
         kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
         
