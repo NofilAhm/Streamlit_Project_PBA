@@ -1,17 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-import streamlit as st
+# In[1]:import streamlit as st
 import pandas as pd
 from pathlib import Path
-import altair as alt # 💡 NEW: Import Altair for charting
+import altair as alt
 
 # Set the page configuration to wide layout
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Reliable Styling and Readability (FINAL FIX)
+# Custom CSS for Styling and Readability
 # -------------------------
 FOODPANDA_THEME = """
 <style>
@@ -71,7 +70,7 @@ FOODPANDA_THEME = """
 st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
 
 # -------------------------
-# Hardcoded users & Session State (UNCHANGED)
+# Hardcoded users & Session State
 # -------------------------
 USERS = {
     "nofil": "12345",
@@ -84,7 +83,7 @@ if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 # -------------------------
-# Login function (UNCHANGED)
+# Login function
 # -------------------------
 def login():
     col1, col2, col3 = st.columns([1, 1, 1]) 
@@ -110,33 +109,37 @@ def login():
                     st.error("Invalid username or password")
                     
 # -------------------------
-# Data Loading and Preparation Function (UNCHANGED)
+# Data Loading and Preparation Function (ROBUST & CLEANED)
 # -------------------------
 @st.cache_data
 def load_data():
     """Loads, cleans, and engineers features for the sales dashboard."""
     
+    # Assumes file is named EXACTLY 'dataset' and is in the same folder.
     DATA_FILE = Path(__file__).parent / "dataset" 
 
     try:
         df = pd.read_csv(DATA_FILE)
         
         # --- DATA CLEANING & FEATURE ENGINEERING ---
+        
+        # 1. Date Conversions
         DATE_COLUMNS = ['signup_date', 'order_date', 'last_order_date', 'rating_date']
         for col in DATE_COLUMNS:
             df[col] = pd.to_datetime(df[col], errors='coerce')
             
+        # 2. Ensure Price and Quantity are numeric
         df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
             
+        # 3. Calculate Sales (Revenue per item)
         df['sales'] = df['quantity'] * df['price']
         
-        # NOTE: Using 'Order_Day' for the line chart requires a continuous time axis
-        df['Order_Day'] = df['order_date'].dt.normalize()
-        # Using 'Order_Month' for month-level aggregation
-        df['Order_Month'] = df['order_date'].dt.to_period('M').astype(str)
+        # 4. Create Time-Based Features for Charts
+        df['Order_Day'] = df['order_date'].dt.normalize() # Day only
         df['DayOfWeek'] = df['order_date'].dt.day_name()
         
+        # 5. Drop rows where essential data is missing
         df.dropna(subset=['order_id', 'order_date', 'sales'], inplace=True)
         
         return df
@@ -146,7 +149,7 @@ def load_data():
         return pd.DataFrame() 
 
 # -------------------------
-# Dashboard function (CHART ADDED)
+# Dashboard function
 # -------------------------
 def main_dashboard():
     # Reset background theme for the main dashboard content area
@@ -179,7 +182,7 @@ def main_dashboard():
         return
 
     # ------------------------------------
-    # KPI Implementation (UNCHANGED)
+    # KPI Implementation
     # ------------------------------------
     ORDER_COL = 'order_id' 
     PRICE_COL = 'sales'
@@ -204,21 +207,29 @@ def main_dashboard():
         st.write("---")
     
     # ------------------------------------
-    # 💡 NEW: MONTH-WISE SALES CHART
+    # MONTH-WISE SALES CHART
     # ------------------------------------
-    if 'Order_Month' in df.columns and PRICE_COL in df.columns:
-        st.subheader("Monthly Revenue Trend")
+    if 'order_date' in df.columns and PRICE_COL in df.columns:
+        st.subheader("Monthly Revenue Trend (Month and Year)")
         
-        # 1. Group the data by month and sum the sales
-        monthly_sales = df.groupby('Order_Month')[PRICE_COL].sum().reset_index()
+        # 1. Prepare data for charting: Get the first day of the month as a proper datetime object
+        df['Order_Month_Date'] = df['order_date'].dt.to_period('M').dt.start_time
+        
+        # 2. Group the data by the new month-date field and sum the sales
+        monthly_sales = df.groupby('Order_Month_Date')[PRICE_COL].sum().reset_index()
         monthly_sales.columns = ['Month', 'Total Sales']
 
-        # 2. Create the Altair Line Chart
+        # 3. Create the Altair Line Chart
         chart = alt.Chart(monthly_sales).mark_line(point=True, color='#D70F64').encode(
-            # Sort the month axis correctly using the Month period string
-            x=alt.X('Month:N', sort=None, axis=alt.Axis(title='Month')),
+            # Use a Temporal type (:T) for the x-axis with custom formatting
+            x=alt.X('Month:T', 
+                    axis=alt.Axis(
+                        title='Month and Year',
+                        format='%b %Y' 
+                    )
+            ),
             y=alt.Y('Total Sales:Q', axis=alt.Axis(title='Total Revenue ($)')),
-            tooltip=['Month', alt.Tooltip('Total Sales', format='$,.2f')]
+            tooltip=[alt.Tooltip('Month', format='%b %Y'), alt.Tooltip('Total Sales', format='$,.2f')]
         ).properties(
             title='Monthly Revenue Over Time'
         ).interactive() # Allow zoom/pan
@@ -226,7 +237,7 @@ def main_dashboard():
         st.altair_chart(chart, use_container_width=True)
         st.write("---")
     else:
-        st.warning("Cannot generate monthly sales chart. Check 'Order_Month' and 'sales' columns.")
+        st.warning("Cannot generate monthly sales chart. Check 'order_date' and 'sales' columns.")
 
     # Display raw data preview 
     st.subheader("Raw Data Preview")
@@ -234,7 +245,7 @@ def main_dashboard():
     st.dataframe(df.head(), use_container_width=True)
 
 # -------------------------
-# App routing and Run App (UNCHANGED)
+# App routing
 # -------------------------
 def main():
     if not st.session_state.get("logged_in", False):
@@ -242,5 +253,8 @@ def main():
     else:
         main_dashboard()
 
+# -------------------------
+# Run app
+# -------------------------
 if __name__ == "__main__":
     main()
