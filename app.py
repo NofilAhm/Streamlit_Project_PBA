@@ -145,7 +145,7 @@ def main_dashboard():
 
     # Load the data
     # 🚨🚨🚨 CHANGE THIS PATH TO YOUR ACTUAL CSV FILE PATH 🚨🚨🚨
-    FILE_PATH = "data/dataset.csv" 
+    FILE_PATH = "/dataset.csv" 
     
     try:
         df = load_data(FILE_PATH)
