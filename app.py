@@ -307,7 +307,7 @@ def show_customer_overview(df):
                     age_counts = customer_age.groupby(AGE_GROUP_COL)[CUST_COL].count().reset_index()
                     age_counts.columns = ['Age Group', 'Customer Count']
                     
-                    # 🚨 NEW: Calculate Percentage
+                    # Calculate Percentage
                     total_customers_in_chart = age_counts['Customer Count'].sum()
                     age_counts['Percentage'] = (age_counts['Customer Count'] / total_customers_in_chart) * 100
                     
@@ -322,26 +322,15 @@ def show_customer_overview(df):
                     arc = pie_chart.mark_arc(outerRadius=120, innerRadius=30).encode(
                         color=alt.Color("Age Group:N", scale=color_scale),
                         order=alt.Order("Customer Count", sort="descending"),
-                        tooltip=["Age Group", "Customer Count", alt.Tooltip('Percentage', format='.2f') + '%'] # Add percentage to tooltip
+                        # 🚨 FIX APPLIED HERE: Using alt.Tooltip correctly with format and title
+                        tooltip=[
+                            "Age Group", 
+                            "Customer Count", 
+                            alt.Tooltip('Percentage', format='.2f', title='Contribution (%)') # Using title to add clarity to the percentage
+                        ] 
                     )
                     
-                    # 🚨 ENHANCEMENT: Increase text size and add percentage to labels
-                    text = pie_chart.mark_text(radius=140, fill="black").encode( # Set fill to black for better contrast
-                        text=alt.Text("Percentage", format=".1f"), # Display percentage with one decimal
-                        order=alt.Order("Customer Count", sort="descending"),
-                        color=alt.value("black"), # Ensure text color is visible
-                        # 🚨 NEW: Adjust font size for the labels
-                        # This requires setting the property on the text mark itself or using mark_text's properties
-                    )
-
-                    # For explicit text formatting (e.g., adding '%' sign directly on the chart)
-                    # We need to create a combined text field
-                    text_labels = pie_chart.mark_text(radius=140, fontSize=14).encode( # 🚨 NEW: fontSize
-                        text=alt.Text("formatted_label:N", format="s"), # Use a formatted string
-                        order=alt.Order("Customer Count", sort="descending"),
-                        color=alt.value("black")
-                    )
-                    # Create a new column with combined count and percentage for labels
+                    # Create the formatted label for the chart text
                     age_counts['formatted_label'] = age_counts.apply(
                         lambda row: f"{row['Customer Count']} ({row['Percentage']:.1f}%)", axis=1
                     )
