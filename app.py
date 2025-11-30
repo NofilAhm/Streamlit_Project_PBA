@@ -8,28 +8,34 @@ import streamlit as st
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Foodpanda Theme (Revised Input Background)
+# Custom CSS for Foodpanda Theme (Final Fix for Input Background)
 # -------------------------
 FOODPANDA_THEME = """
 <style>
-/* 1. AGGRESSIVE BACKGROUND COLOR FIX (20% transparent Foodpanda Pink) */
+/* 1. AGGRESSIVE MAIN BACKGROUND FIX (20% transparent Foodpanda Pink) */
 [data-testid="stAppViewContainer"] {
     background-color: rgba(215, 15, 100, 0.8) !important; 
-    color: white !important; /* General text remains white for contrast */
+    color: white !important; 
 }
 
-/* 2. CENTER THE MAIN CONTENT VERTICALLY AND HORIZONTALLY */
+/* 2. Pushes content down about 1.5 inches */
 [data-testid="stApp"] {
-    padding-top: 80px; /* Pushes content down about 1.5 inches */
+    padding-top: 80px; 
 }
 
-/* 3. INPUT FIELD STYLING */
+/* 3. INPUT FIELD STYLING: THE FIX */
+/* Target the immediate parent container of the input for the background color */
+.stTextInput > div:first-child {
+    background-color: #F0F2F6 !important; /* Light Gray background for the input box area */
+    border-radius: 0.25rem; /* Match Streamlit's typical rounded corners */
+    padding: 0.5rem; /* Add some padding inside the container */
+}
+
 /* Targets the actual input element */
 .stTextInput > div > div > input {
     color: black !important; /* Input text is BLACK for readability */
-    /* 💡 FIX: Set a solid, light background for the input box */
-    background-color: white !important; 
-    border: 1px solid #D70F64 !important; /* Use the Foodpanda pink border */
+    background-color: transparent !important; /* Makes the input field itself transparent */
+    border: none !important; /* Remove the inner border to match the light container */
 }
 
 /* 4. Ensure input labels (Username, Password) are white */
@@ -61,39 +67,27 @@ h1, h2, h3, h4, .stMarkdown {
 st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
 
 # -------------------------
-# Hardcoded users (UNCHANGED)
+# REMAINING PYTHON LOGIC (UNCHANGED)
 # -------------------------
 USERS = {
     "nofil": "12345",
     "admin": "admin123"
 }
 
-# -------------------------
-# Initialize session state (UNCHANGED)
-# -------------------------
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 if "username" not in st.session_state:
     st.session_state["username"] = ""
 
-# -------------------------
-# Login function (UNCHANGED)
-# -------------------------
 def login():
-    # Create a layout with columns to center the login box
     col1, col2, col3 = st.columns([1, 1, 1]) 
-    
     with col2:
-        # 1. Add the small Foodpanda logo image
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Foodpanda_logo.svg/320px-Foodpanda_logo.svg.png", 
                  width=100) 
-
         st.markdown("<h2 style='text-align: center;'>Dashboard Login</h2>", unsafe_allow_html=True)
-        
         with st.container(border=True): 
             username = st.text_input("Username", key="login_user")
             password = st.text_input("Password", type="password", key="login_pass")
-
             if st.button("Login", use_container_width=True):
                 if username in USERS and USERS[username] == password:
                     st.session_state["logged_in"] = True
@@ -104,19 +98,13 @@ def login():
                 else:
                     st.error("Invalid username or password")
                     
-# -------------------------
-# Dashboard function (UNCHANGED)
-# -------------------------
 def main_dashboard():
-    # RESET THEME FOR DASHBOARD CONTENT
     st.markdown("""
         <style>
-        /* Set background back to solid white for the dashboard */
         [data-testid="stAppViewContainer"] {
             background-color: white !important; 
             color: #333333 !important;
         }
-        /* Ensure sidebar keeps the pink color if you want it */
         [data-testid="stSidebar"] {
             background-color: rgba(215, 15, 100, 0.8) !important;
         }
@@ -125,25 +113,17 @@ def main_dashboard():
     
     st.sidebar.title("Dashboard Menu")
     st.sidebar.write(f"Welcome, **{st.session_state['username']}**")
-
     if st.sidebar.button("Logout"):
         st.session_state.clear() 
         st.rerun() 
-
     st.title("Foodpanda Sales Dashboard")
     st.write("Your dashboard content goes here…")
 
-# -------------------------
-# App routing (UNCHANGED)
-# -------------------------
 def main():
     if not st.session_state.get("logged_in", False):
         login()
     else:
         main_dashboard()
 
-# -------------------------
-# Run app (UNCHANGED)
-# -------------------------
 if __name__ == "__main__":
     main()
