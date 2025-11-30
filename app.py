@@ -8,7 +8,7 @@ import streamlit as st
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Foodpanda Theme (Revised Text Color)
+# Custom CSS for Foodpanda Theme (Revised Input Background)
 # -------------------------
 FOODPANDA_THEME = """
 <style>
@@ -26,9 +26,10 @@ FOODPANDA_THEME = """
 /* 3. INPUT FIELD STYLING */
 /* Targets the actual input element */
 .stTextInput > div > div > input {
-    color: black !important; /* 💡 FIX: Forces input text to be BLACK */
-    background-color: transparent !important; /* Makes input field background transparent */
-    border: 1px solid white !important; 
+    color: black !important; /* Input text is BLACK for readability */
+    /* 💡 FIX: Set a solid, light background for the input box */
+    background-color: white !important; 
+    border: 1px solid #D70F64 !important; /* Use the Foodpanda pink border */
 }
 
 /* 4. Ensure input labels (Username, Password) are white */
