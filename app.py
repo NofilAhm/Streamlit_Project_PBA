@@ -296,7 +296,7 @@ def show_customer_overview(df):
                 st.info("Cannot show Payment Method chart. Missing 'payment_method' column.")
 
 
-        # 2. Pie Chart: Age Distribution (Right Column) - Labels Inside Slices
+        # 2. Pie Chart: Age Distribution (Right Column) - REMOVED ALL LABELS
         with chart_col2:
             if AGE_GROUP_COL in df.columns and CUST_COL in df.columns:
                 
@@ -319,7 +319,7 @@ def show_customer_overview(df):
                     
                     color_scale = alt.Scale(range=['#D70F64', '#FF5A93', '#FF8CC6', '#6A053F', '#9C0A52'])
 
-                    # Draw the arcs (pie slices) 
+                    # Draw the arcs (pie slices) - relying on tooltips/legend
                     arc = pie_chart.mark_arc(outerRadius=140, innerRadius=30).encode(
                         color=alt.Color("Age Group:N", scale=color_scale),
                         order=alt.Order("Customer Count", sort="descending"),
@@ -330,19 +330,8 @@ def show_customer_overview(df):
                         ] 
                     )
                     
-                    # Create the formatted label for the chart text
-                    age_counts['formatted_label'] = age_counts.apply(
-                        lambda row: f"{row['Customer Count']} ({row['Percentage']:.1f}%)", axis=1
-                    )
-                    
-                    # 🚨 FIX APPLIED HERE: Radius set to 85 (inside the slices), fill color set to white
-                    text = alt.Chart(age_counts).mark_text(radius=85, fill="white", fontSize=14).encode(
-                        text=alt.Text("formatted_label:N"),
-                        order=alt.Order("Customer Count", sort="descending"),
-                        color=alt.value("white") # Ensures text color is white for contrast against dark pink
-                    )
-
-                    final_pie = arc + text # Re-enable the text mark
+                    # 🚨 LABEL REMOVAL: The text mark is now completely omitted
+                    final_pie = arc
                     
                     st.altair_chart(final_pie, use_container_width=True)
                     
