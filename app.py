@@ -3,68 +3,12 @@
 
 # In[1]:
 import streamlit as st
+import pandas as pd # 💡 NEW: Import pandas
 
 # Set the page configuration to wide layout
 st.set_page_config(layout="wide") 
 
-# -------------------------
-# Custom CSS for Foodpanda Theme (Final Fix for Input Background)
-# -------------------------
-FOODPANDA_THEME = """
-<style>
-/* 1. AGGRESSIVE MAIN BACKGROUND FIX (20% transparent Foodpanda Pink) */
-[data-testid="stAppViewContainer"] {
-    background-color: rgba(215, 15, 100, 0.8) !important; 
-    color: white !important; 
-}
-
-/* 2. Pushes content down about 1.5 inches */
-[data-testid="stApp"] {
-    padding-top: 80px; 
-}
-
-/* 3. INPUT FIELD STYLING: THE FIX */
-/* Target the immediate parent container of the input for the background color */
-.stTextInput > div:first-child {
-    background-color: #F0F2F6 !important; /* Light Gray background for the input box area */
-    border-radius: 0.25rem; /* Match Streamlit's typical rounded corners */
-    padding: 0.5rem; /* Add some padding inside the container */
-}
-
-/* Targets the actual input element */
-.stTextInput > div > div > input {
-    color: black !important; /* Input text is BLACK for readability */
-    background-color: transparent !important; /* Makes the input field itself transparent */
-    border: none !important; /* Remove the inner border to match the light container */
-}
-
-/* 4. Ensure input labels (Username, Password) are white */
-.stTextInput > label {
-    color: white !important;
-}
-
-/* 5. Style the login button */
-.stButton > button {
-    background-color: #FFFFFF;
-    border: 1px solid #D70F64;
-    color: #D70F64 !important;
-    font-weight: bold;
-}
-.stButton > button:hover {
-    background-color: #FF5A93;
-    color: white !important; 
-}
-
-/* 6. Ensure titles and general text remain white */
-h1, h2, h3, h4, .stMarkdown {
-    color: white !important;
-}
-
-</style>
-"""
-
-# Apply the custom CSS
-st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
+# ... (CSS and session state initialization remains here) ...
 
 # -------------------------
 # REMAINING PYTHON LOGIC (UNCHANGED)
@@ -79,25 +23,26 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state["username"] = ""
 
-def login():
-    col1, col2, col3 = st.columns([1, 1, 1]) 
-    with col2:
-        st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Foodpanda_logo.svg/320px-Foodpanda_logo.svg.png", 
-                 width=100) 
-        st.markdown("<h2 style='text-align: center;'>Dashboard Login</h2>", unsafe_allow_html=True)
-        with st.container(border=True): 
-            username = st.text_input("Username", key="login_user")
-            password = st.text_input("Password", type="password", key="login_pass")
-            if st.button("Login", use_container_width=True):
-                if username in USERS and USERS[username] == password:
-                    st.session_state["logged_in"] = True
-                    st.session_state["username"] = username
-                    st.success("Logged in successfully! Redirecting...")
-                    st.rerun()
-                    return 
-                else:
-                    st.error("Invalid username or password")
-                    
+# ... (login function remains here) ...
+
+# -------------------------
+# Data Loading Function
+# -------------------------
+# @st.cache_data ensures data is loaded only once and cached for performance
+@st.cache_data
+def load_data(file_path):
+    # Load your Kaggle dataset
+    df = pd.read_csv(file_path)
+    # Optional: Perform basic cleaning/initial type conversion here if needed
+    
+    # Ensure relevant columns are correctly typed, e.g., sales/price columns as numeric
+    # Example: df['Price'] = pd.to_numeric(df['Price'], errors='coerce')
+    
+    return df
+
+# -------------------------
+# Dashboard function (MODIFIED)
+# -------------------------
 def main_dashboard():
     st.markdown("""
         <style>
@@ -114,16 +59,30 @@ def main_dashboard():
     st.sidebar.title("Dashboard Menu")
     st.sidebar.write(f"Welcome, **{st.session_state['username']}**")
     if st.sidebar.button("Logout"):
-        st.session_state.clear() 
-        st.rerun() 
-    st.title("Foodpanda Sales Dashboard")
-    st.write("Your dashboard content goes here…")
+        st.session_state.clear()  
+        st.rerun()  
 
-def main():
-    if not st.session_state.get("logged_in", False):
-        login()
-    else:
-        main_dashboard()
+    st.title("Foodpanda Sales Overview Dashboard 🐼")
+    st.write("---") # Visual separator
 
-if __name__ == "__main__":
-    main()
+    # 💡 NEW: Load the data
+    try:
+        # REPLACE 'data/foodpanda_data.csv' with your actual file path!
+        FILE_PATH = "data/foodpanda_data.csv" 
+        df = load_data(FILE_PATH)
+
+        # Display first few rows and shape for verification
+        st.subheader("Raw Data Preview")
+        st.write(f"Dataset shape: **{df.shape}**")
+        st.dataframe(df.head())
+
+        # -------------------------
+        # Dashboard Content (Step 3: KPIs and Charts will go here)
+        # -------------------------
+
+    except FileNotFoundError:
+        st.error(f"Error: The file '{FILE_PATH}' was not found. Please ensure the path is correct and the file is in your GitHub repository.")
+    except Exception as e:
+        st.error(f"An unexpected error occurred during data loading: {e}")
+
+# ... (main and __name__ blocks remain here) ...
