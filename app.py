@@ -8,86 +8,93 @@ import streamlit as st
 st.set_page_config(layout="wide") 
 
 # -------------------------
-# Custom CSS for Foodpanda Theme (Final Fix for Input Background)
+# Global Custom CSS (ONLY for main background/positioning)
 # -------------------------
-FOODPANDA_THEME = """
+GLOBAL_THEME = """
 <style>
-/* 1. AGGRESSIVE MAIN BACKGROUND FIX (20% transparent Foodpanda Pink) */
+/* Main app background and positioning */
 [data-testid="stAppViewContainer"] {
     background-color: rgba(215, 15, 100, 0.8) !important; 
     color: white !important; 
 }
 
-/* 2. Pushes content down about 1.5 inches */
+/* Pushes content down */
 [data-testid="stApp"] {
     padding-top: 80px; 
 }
-
-/* 3. INPUT FIELD STYLING: THE FIX */
-/* Target the immediate parent container of the input for the background color */
-.stTextInput > div:first-child {
-    background-color: #F0F2F6 !important; /* Light Gray background for the input box area */
-    border-radius: 0.25rem; /* Match Streamlit's typical rounded corners */
-    padding: 0.5rem; /* Add some padding inside the container */
-}
-
-/* Targets the actual input element */
-.stTextInput > div > div > input {
-    color: black !important; /* Input text is BLACK for readability */
-    background-color: transparent !important; /* Makes the input field itself transparent */
-    border: none !important; /* Remove the inner border to match the light container */
-}
-
-/* 4. Ensure input labels (Username, Password) are white */
-.stTextInput > label {
-    color: white !important;
-}
-
-/* 5. Style the login button */
-.stButton > button {
-    background-color: #FFFFFF;
-    border: 1px solid #D70F64;
-    color: #D70F64 !important;
-    font-weight: bold;
-}
-.stButton > button:hover {
-    background-color: #FF5A93;
-    color: white !important; 
-}
-
-/* 6. Ensure titles and general text remain white */
-h1, h2, h3, h4, .stMarkdown {
-    color: white !important;
-}
-
 </style>
 """
+st.markdown(GLOBAL_THEME, unsafe_allow_html=True)
 
-# Apply the custom CSS
-st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
 
 # -------------------------
-# REMAINING PYTHON LOGIC (UNCHANGED)
+# Hardcoded users (UNCHANGED)
 # -------------------------
 USERS = {
     "nofil": "12345",
     "admin": "admin123"
 }
 
+# -------------------------
+# Initialize session state (UNCHANGED)
+# -------------------------
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 if "username" not in st.session_state:
     st.session_state["username"] = ""
 
+# -------------------------
+# Login function (CRITICAL CSS ADDED HERE)
+# -------------------------
 def login():
+    # Inject highly specific CSS directly into the login page context
+    # This targets the input box background and text color reliably.
+    st.markdown("""
+    <style>
+        /* 1. Target the actual input field background/color */
+        .stTextInput > div > div > input {
+            color: black !important;
+            background-color: white !important; /* Forces white background */
+            border: 1px solid #D70F64 !important; /* Foodpanda border */
+        }
+        
+        /* 2. Target the label/helper text (Username/Password) */
+        .stTextInput > label {
+            color: white !important; 
+        }
+
+        /* 3. Style the login button */
+        .stButton > button {
+            background-color: #FFFFFF;
+            border: 1px solid #D70F64;
+            color: #D70F64 !important;
+            font-weight: bold;
+        }
+        .stButton > button:hover {
+            background-color: #FF5A93;
+            color: white !important; 
+        }
+
+        /* 4. Ensure titles are visible */
+        h2 {
+            color: white !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
     col1, col2, col3 = st.columns([1, 1, 1]) 
+    
     with col2:
-        st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Foodpanda_logo.svg/320px-Foodpanda_logo.svg.png", 
-                 width=100) 
+        # 1. Use relative path for the image (MUST BE IN YOUR REPO)
+        # Assuming you placed the image in 'images/foodpanda_logo.png'
+        st.image("images/foodpanda_logo.png", width=100) 
+
         st.markdown("<h2 style='text-align: center;'>Dashboard Login</h2>", unsafe_allow_html=True)
+        
         with st.container(border=True): 
             username = st.text_input("Username", key="login_user")
             password = st.text_input("Password", type="password", key="login_pass")
+
             if st.button("Login", use_container_width=True):
                 if username in USERS and USERS[username] == password:
                     st.session_state["logged_in"] = True
@@ -98,13 +105,19 @@ def login():
                 else:
                     st.error("Invalid username or password")
                     
+# -------------------------
+# Dashboard function (UNCHANGED)
+# -------------------------
 def main_dashboard():
+    # RESET THEME FOR DASHBOARD CONTENT
     st.markdown("""
         <style>
+        /* Set background back to solid white for the dashboard */
         [data-testid="stAppViewContainer"] {
             background-color: white !important; 
             color: #333333 !important;
         }
+        /* Ensure sidebar keeps the pink color if you want it */
         [data-testid="stSidebar"] {
             background-color: rgba(215, 15, 100, 0.8) !important;
         }
@@ -113,17 +126,25 @@ def main_dashboard():
     
     st.sidebar.title("Dashboard Menu")
     st.sidebar.write(f"Welcome, **{st.session_state['username']}**")
+
     if st.sidebar.button("Logout"):
         st.session_state.clear() 
         st.rerun() 
+
     st.title("Foodpanda Sales Dashboard")
     st.write("Your dashboard content goes here…")
 
+# -------------------------
+# App routing (UNCHANGED)
+# -------------------------
 def main():
     if not st.session_state.get("logged_in", False):
         login()
     else:
         main_dashboard()
 
+# -------------------------
+# Run app (UNCHANGED)
+# -------------------------
 if __name__ == "__main__":
     main()
