@@ -583,7 +583,8 @@ def main_dashboard():
 
     # --- Sidebar Setup ---
     st.sidebar.title("Dashboard Menu")
-    st.sidebar.markdown(f"**Welcome, {st.session_session['username']}**")
+    # FIX: Corrected typo from st.session_session to st.session_state
+    st.sidebar.markdown(f"**Welcome, {st.session_state['username']}**")
     
     # Logout Button
     if st.sidebar.button("Logout", key="logout_btn"):
