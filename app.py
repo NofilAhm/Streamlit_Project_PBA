@@ -167,9 +167,9 @@ def load_data():
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
         
         # Ensure text columns are clean
-        df['item_name'] = df['item_name'].astype(str).fillna('Unknown Item')
+        df['dish_name'] = df['dish_name'].astype(str).fillna('Unknown Item')
         df['category'] = df['category'].astype(str).fillna('Unknown Category')
-        df['restaurant_name'] = df['restaurant_name'].astype(str).fillna('Unknown Restaurant')
+        df['restaurant'] = df['restaurant'].astype(str).fillna('Unknown Restaurant')
 
         # Create sales column
         df['sales'] = df['quantity'] * df['price']
@@ -360,7 +360,7 @@ def show_customer_overview(df):
 def show_product_overview(df):
     """Generates the content for the Product Overview tab based on provided KPIs."""
     
-    ITEM_COL = 'item_name'
+    ITEM_COL = 'dish_name'
     CATEGORY_COL = 'category'
     RESTAURANT_COL = 'restaurant_name'
     QTY_COL = 'quantity'
