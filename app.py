@@ -49,10 +49,17 @@ FOODPANDA_THEME = """
     border: none !important; 
 }
 
-/* 4. Ensure input labels and titles are visible (Set to brand pink on pink background) */
-.stTextInput > label, h1, h2, h3, h4, .stMarkdown {
+/* 4. Ensure input labels and titles are visible */
+/* 4A. INPUT LABELS FIX: Set to WHITE for the pink LOGIN screen background */
+.stTextInput > label {
+    color: white !important;
+}
+
+/* 4B. H1, H2, H3, H4, .stMarkdown - Keep Pink for titles/headers on the login screen */
+h1, h2, h3, h4, .stMarkdown {
     color: #D70F64 !important; 
 }
+
 
 /* 5. General Button Styling (Default) */
 .stButton > button {
@@ -138,17 +145,24 @@ def login():
                 else:
                     st.error("Invalid username or password")
                     
-# -------------------------
-# Data Loading and Preparation Function
-# -------------------------
+# --------------------------------------------------------------------------------
+# Data Loading and Preparation Function (Using GitHub URL)
+# --------------------------------------------------------------------------------
+# Data Source: Using the public GitHub raw file URL for reliable deployment
+GITHUB_DATA_URL = "https://raw.githubusercontent.com/NofilAhm/Streamlit_Project_PBA/main/dataset.csv" 
+
 @st.cache_data
 def load_data():
-    """Loads, cleans, and engineers features for the sales dashboard."""
+    """
+    Loads, cleans, and engineers features for the sales dashboard 
+    directly from a stable web URL to avoid file path errors.
+    """
     
-    DATA_FILE = Path(__file__).parent / "dataset" 
+    data_source = GITHUB_DATA_URL
 
     try:
-        df = pd.read_csv(DATA_FILE)
+        # Load data directly from the URL
+        df = pd.read_csv(data_source) 
         
         # --- DATA CLEANING & FEATURE ENGINEERING ---
         DATE_COLUMNS = ['signup_date', 'order_date', 'last_order_date', 'rating_date']
@@ -158,8 +172,12 @@ def load_data():
         df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
         
-        # Age column is treated as text/categorical data (Age Groups)
-            
+        # Ensure text columns are clean
+        df['item_name'] = df['item_name'].astype(str).fillna('Unknown Item')
+        df['category'] = df['category'].astype(str).fillna('Unknown Category')
+        df['restaurant_name'] = df['restaurant_name'].astype(str).fillna('Unknown Restaurant')
+
+        # Create sales column
         df['sales'] = df['quantity'] * df['price']
         
         df['Order_Day'] = df['order_date'].dt.normalize()
@@ -171,7 +189,7 @@ def load_data():
         return df
 
     except Exception as e:
-        st.error(f"Failed to load or process data from '{DATA_FILE}'. Error: {e}")
+        st.error(f"Failed to load or process data from URL. Please ensure your dataset is correctly named 'dataset.csv' and is public. Error: {e}")
         return pd.DataFrame() 
 
 # -------------------------
@@ -330,7 +348,6 @@ def show_customer_overview(df):
                         ] 
                     )
                     
-                    # 🚨 LABEL REMOVAL: The text mark is now completely omitted
                     final_pie = arc
                     
                     st.altair_chart(final_pie, use_container_width=True)
@@ -346,9 +363,233 @@ def show_customer_overview(df):
 
 
 def show_product_overview(df):
-    st.title("Product Overview Dashboard 🍔")
+    """Generates the content for the Product Overview tab based on provided KPIs."""
+    
+    ITEM_COL = 'item_name'
+    CATEGORY_COL = 'category'
+    RESTAURANT_COL = 'restaurant_name'
+    QTY_COL = 'quantity'
+    SALES_COL = 'sales'
+    RATING_COL = 'rating'
+    ISSUES_COL = 'delivery_issues' 
+
+    st.title("Product & Restaurant Overview Dashboard 🍔")
     st.write("---")
-    st.info("Content coming soon! This tab will analyze best-selling items and categories.")
+
+    # Check for required columns before proceeding
+    required_cols = [ITEM_COL, CATEGORY_COL, RESTAURANT_COL, QTY_COL, SALES_COL]
+    if not all(col in df.columns for col in required_cols):
+        st.warning(f"Missing required columns for Product Overview: {', '.join([c for c in required_cols if c not in df.columns])}")
+        return
+
+    # ----------------------------------------------------
+    #  --- Sales Visualization Section (Restaurant & Dish) ---
+    # ----------------------------------------------------
+    st.header("Sales Performance Visualizations 📈")
+    col_rest_sales, col_dish_sales = st.columns(2)
+
+    # 1. Bar Chart: Restaurant Sales (All Restaurants - Top 20)
+    with col_rest_sales:
+        st.subheader("Top 20 Restaurant Sales Ranking")
+        restaurant_sales = df.groupby(RESTAURANT_COL)[SALES_COL].sum().reset_index()
+        restaurant_sales.columns = ['Restaurant Name', 'Total Sales']
+        
+        # Sort and select top 20 for a cleaner chart
+        top_n_rest_sales = restaurant_sales.sort_values('Total Sales', ascending=False).head(20)
+
+        chart_rest = alt.Chart(top_n_rest_sales).mark_bar(color='#D70F64').encode(
+            x=alt.X('Total Sales:Q', title='Total Revenue ($)'),
+            y=alt.Y('Restaurant Name:N', sort='-x', title=''),
+            tooltip=['Restaurant Name', alt.Tooltip('Total Sales', format='$,.0f')]
+        ).properties(
+            title='Top 20 Restaurants by Sales'
+        ).interactive()
+        
+        st.altair_chart(chart_rest, use_container_width=True)
+
+
+    # 2. Bar Chart: Top Dish Sales (Top 15 Dishes)
+    with col_dish_sales:
+        st.subheader("Top 15 Dishes by Sales Revenue")
+        dish_sales = df.groupby(ITEM_COL)[SALES_COL].sum().nlargest(15).reset_index()
+        dish_sales.columns = ['Dish Name', 'Total Sales']
+
+        chart_dish = alt.Chart(dish_sales).mark_bar(color='#FF5A93').encode(
+            x=alt.X('Total Sales:Q', title='Total Revenue ($)'),
+            y=alt.Y('Dish Name:N', sort='-x', title=''),
+            tooltip=['Dish Name', alt.Tooltip('Total Sales', format='$,.0f')]
+        ).properties(
+            title='Top 15 Dishes by Revenue'
+        ).interactive()
+
+        st.altair_chart(chart_dish, use_container_width=True)
+        
+    st.write("---")
+
+    # --- 1. Top Sellers Section (Original Top Sellers by Quantity/Revenue) ---
+    st.header("Top Sellers (Quantity vs. Revenue)")
+    col_qty, col_rev = st.columns(2)
+
+    # 1A. Most Sold Dishes (by quantity)
+    with col_qty:
+        st.subheader("🥇 Most Sold Dishes (by Quantity)")
+        top_qty = df.groupby(ITEM_COL)[QTY_COL].sum().nlargest(10).reset_index()
+        top_qty.columns = ['Item Name', 'Total Quantity Sold']
+        
+        # Create Bar Chart
+        chart_qty = alt.Chart(top_qty).mark_bar(color='#D70F64').encode(
+            x=alt.X('Total Quantity Sold:Q', title='Quantity Sold'),
+            y=alt.Y('Item Name:N', sort='-x', title=''),
+            tooltip=['Item Name', alt.Tooltip('Total Quantity Sold', format=',')]
+        ).properties(height=350)
+        st.altair_chart(chart_qty, use_container_width=True)
+        st.dataframe(top_qty, use_container_width=True, hide_index=True)
+
+    # 1B. Most Revenue-Generating Dishes (by price × quantity)
+    with col_rev:
+        st.subheader("💰 Top Revenue-Generating Dishes")
+        top_rev = df.groupby(ITEM_COL)[SALES_COL].sum().nlargest(10).reset_index()
+        top_rev.columns = ['Item Name', 'Total Revenue']
+
+        # Create Bar Chart
+        chart_rev = alt.Chart(top_rev).mark_bar(color='#FF5A93').encode(
+            x=alt.X('Total Revenue:Q', title='Total Revenue ($)'),
+            y=alt.Y('Item Name:N', sort='-x', title=''),
+            tooltip=['Item Name', alt.Tooltip('Total Revenue', format='$,.2f')]
+        ).properties(height=350)
+        st.altair_chart(chart_rev, use_container_width=True)
+        st.dataframe(top_rev, use_container_width=True, hide_index=True)
+
+    st.write("---")
+
+    # --- 2. Category Insights Section ---
+    st.header("Category Insights")
+    
+    category_summary = df.groupby(CATEGORY_COL).agg(
+        Total_Sales=(SALES_COL, 'sum'),
+        Total_Orders=('order_id', 'nunique'),
+        Avg_Rating=(RATING_COL, 'mean')
+    ).reset_index()
+
+    # Calculate Total Sales for Percentage
+    total_sales_overall = category_summary['Total_Sales'].sum()
+    category_summary['Sales_Share'] = (category_summary['Total_Sales'] / total_sales_overall) 
+    
+    # Calculate Category-wise AOV
+    category_summary['AOV'] = category_summary['Total_Sales'] / category_summary['Total_Orders']
+    category_summary['AOV'] = category_summary['AOV'].round(2)
+    category_summary['Avg_Rating'] = category_summary['Avg_Rating'].round(2)
+    
+    category_summary = category_summary.rename(columns={
+        'Total_Sales': 'Total Sales', 
+        'Total_Orders': 'Total Orders',
+        'Sales_Share': 'Sales Share',
+        'Avg_Rating': 'Average Rating'
+    })
+
+    col_share, col_aov, col_rating = st.columns(3)
+
+    # 2A. Category Share of Sales (Donut Chart)
+    with col_share:
+        st.subheader("📊 Category Share of Sales")
+        
+        chart_share = alt.Chart(category_summary).encode(
+            theta=alt.Theta("Total Sales", stack=True)
+        )
+        
+        color_scale = alt.Scale(range=['#D70F64', '#FF5A93', '#FF8CC6', '#6A053F', '#9C0A52', '#333333'])
+
+        arc_share = chart_share.mark_arc(outerRadius=120, innerRadius=60).encode(
+            color=alt.Color(CATEGORY_COL, scale=color_scale),
+            order=alt.Order("Total Sales", sort="descending"),
+            tooltip=[
+                CATEGORY_COL, 
+                alt.Tooltip('Total Sales', format='$,.2f', title='Revenue'), 
+                alt.Tooltip('Sales Share', format='.1%', title='Share (%)') 
+            ] 
+        ).properties(height=350)
+        
+        st.altair_chart(arc_share, use_container_width=True)
+
+    # 2B. Category-wise AOV (Bar Chart)
+    with col_aov:
+        st.subheader("💸 Category Average Order Value (AOV)")
+        
+        chart_aov = alt.Chart(category_summary).mark_bar(color='#D70F64').encode(
+            x=alt.X('AOV:Q', title='AOV ($)'),
+            y=alt.Y(CATEGORY_COL + ':N', sort='-x', title=''),
+            tooltip=[CATEGORY_COL, alt.Tooltip('AOV', format='$,.2f')]
+        ).properties(height=350)
+        
+        st.altair_chart(chart_aov, use_container_width=True)
+
+    # 2C. Category-wise Ratings (Bar Chart)
+    with col_rating:
+        st.subheader("⭐ Category Average Rating")
+        
+        # Determine rating scale min/max for better visualization
+        rating_scale_min = df[RATING_COL].min() * 0.9 if RATING_COL in df.columns and not df[RATING_COL].empty else 1
+        rating_scale_max = df[RATING_COL].max() * 1.1 if RATING_COL in df.columns and not df[RATING_COL].empty else 5
+
+        chart_rating = alt.Chart(category_summary).mark_bar(color='#FF5A93').encode(
+            x=alt.X('Average Rating:Q', title='Average Rating', scale=alt.Scale(domain=[rating_scale_min, rating_scale_max])),
+            y=alt.Y(CATEGORY_COL + ':N', sort=alt.EncodingSortField(field='Average Rating', order='descending'), title=''),
+            tooltip=[CATEGORY_COL, alt.Tooltip('Average Rating', format='.2f')]
+        ).properties(height=350)
+        
+        st.altair_chart(chart_rating, use_container_width=True)
+
+    st.write("---")
+
+    # --- 3. Restaurant Insights Section ---
+    st.header("Restaurant Insights")
+
+    # Aggregate Restaurant Data
+    restaurant_summary = df.groupby(RESTAURANT_COL).agg(
+        Total_Sales=(SALES_COL, 'sum'),
+        Avg_Rating=(RATING_COL, 'mean'),
+        Delivery_Issues_Count=(ISSUES_COL, 'sum') 
+    ).reset_index()
+    restaurant_summary['Avg_Rating'] = restaurant_summary['Avg_Rating'].round(2)
+    
+    # KPIs
+    highest_sales_rest = restaurant_summary.loc[restaurant_summary['Total_Sales'].idxmax()]
+    highest_rating_rest = restaurant_summary.loc[restaurant_summary['Avg_Rating'].idxmax()]
+    lowest_issues_rest = restaurant_summary.loc[restaurant_summary['Delivery_Issues_Count'].idxmin()]
+    
+    kpi_r1, kpi_r2, kpi_r3 = st.columns(3)
+
+    with kpi_r1:
+        st.metric(
+            label="🏆 Highest Sales Restaurant", 
+            value=f"{highest_sales_rest[RESTAURANT_COL]}",
+            delta=f"${highest_sales_rest['Total_Sales']:,.0f}"
+        )
+    with kpi_r2:
+        st.metric(
+            label="⭐ Highest Average Rating", 
+            value=f"{highest_rating_rest[RESTAURANT_COL]}",
+            delta=f"{highest_rating_rest['Avg_Rating']:.2f} / 5.00"
+        )
+    with kpi_r3:
+        st.metric(
+            label="✅ Lowest Delivery Issues", 
+            value=f"{lowest_issues_rest[RESTAURANT_COL]}",
+            delta=f"{lowest_issues_rest['Delivery_Issues_Count']:,} Issues"
+        )
+    
+    st.write("---")
+    
+    # Top 10 Restaurant Sales Table
+    st.subheader("Top 10 Restaurants by Sales (Table View)")
+    top_rest_sales = restaurant_summary.sort_values('Total_Sales', ascending=False).head(10).rename(
+        columns={'Total_Sales': 'Total Sales ($)', 'Avg_Rating': 'Avg Rating', 'Delivery_Issues_Count': 'Delivery Issues'}
+    )
+    st.dataframe(top_rest_sales.style.format({
+        'Total Sales ($)': '$,.0f',
+        'Avg Rating': '{:.2f}',
+        'Delivery Issues': '{:,}'
+    }), use_container_width=True, hide_index=True)
 
 
 # -------------------------
@@ -365,12 +606,18 @@ def main_dashboard():
         [data-testid="stSidebar"] {
             background-color: rgba(215, 15, 100, 0.8) !important;
         }
+        
+        /* FIX OVERRIDE: Input Labels inside the white dashboard content area must be dark for visibility */
+        .stApp .stTextInput > label {
+            color: #333333 !important; /* Overrides the white label color set in the global CSS */
+        }
+        
         </style>
         """, unsafe_allow_html=True)
     
     df = load_data() 
     if df.empty:
-        st.warning("Data loading failed. Please check file path and data format.")
+        # If data load failed, display the error message from load_data and stop execution
         return
 
     # --- Sidebar Setup ---
