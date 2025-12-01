@@ -85,6 +85,15 @@ h1, h2, h3, h4, .stMarkdown {
     color: #333333 !important; 
 }
 
+/* 6. METRIC DELTA FIX: Force delta color to the theme pink (removes default green/red) */
+[data-testid="stMetricDelta"] svg {
+    fill: #D70F64 !important; /* Forces the delta arrow color */
+}
+[data-testid="stMetricDelta"] {
+    color: #D70F64 !important; /* Forces the delta text color */
+}
+
+
 /* Sidebar Styling for Spacing and Font Color */
 [data-testid="stSidebar"] > div:first-child {
     padding-top: 10px !important; 
@@ -216,6 +225,7 @@ def show_sales_overview(df):
         
         kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
         
+        # Note: Delta is explicitly set to None for overall KPIs as they represent totals, not change.
         with kpi_col1:
             st.metric(label="💰 Total Revenue", value=f"${total_revenue:,.2f}")
         with kpi_col2:
@@ -366,7 +376,6 @@ def show_customer_overview(df):
 def show_product_overview(df):
     """Generates the content for the Product Overview tab based on provided KPIs."""
     
-    # Updated: Using 'dish_name' instead of 'item_name'
     ITEM_COL = 'dish_name'
     CATEGORY_COL = 'category'
     RESTAURANT_COL = 'restaurant_name'
@@ -381,28 +390,41 @@ def show_product_overview(df):
     # Check for required columns before proceeding
     required_cols = [ITEM_COL, CATEGORY_COL, RESTAURANT_COL, QTY_COL, SALES_COL]
     if not all(col in df.columns for col in required_cols):
-        # A specific check in case 'dish_name' is missing but 'item_name' is present (unlikely if load_data is correct)
         st.warning(f"Missing required columns for Product Overview: {', '.join([c for c in required_cols if c not in df.columns])}")
         return
 
-    # --- 1. Restaurant Insights Section (MOVED TO TOP) ---
-    st.header("Key Restaurant KPI")
+    # --- 1. Key Performance Indicators (MOVED TO TOP & Added Highest Dish Sales) ---
+    st.header("Key Performance Indicators")
 
     # Aggregate Restaurant Data
     restaurant_summary = df.groupby(RESTAURANT_COL).agg(
         Total_Sales=(SALES_COL, 'sum'),
     ).reset_index()
     
-    # KPIs
+    # Aggregate Dish Data
+    dish_summary = df.groupby(ITEM_COL)[SALES_COL].sum().reset_index()
+
+    # Calculate KPIs
     highest_sales_rest = restaurant_summary.loc[restaurant_summary['Total_Sales'].idxmax()]
+    highest_sales_dish = dish_summary.loc[dish_summary[SALES_COL].idxmax()]
     
-    kpi_r1 = st.columns(1)[0] 
+    # Use 2 columns for KPIs
+    kpi_r1, kpi_r2 = st.columns(2) 
 
     with kpi_r1:
         st.metric(
             label="🏆 Highest Sales Restaurant", 
             value=f"{highest_sales_rest[RESTAURANT_COL]}",
-            delta=f"${highest_sales_rest['Total_Sales']:,.0f}"
+            # Use the total sales amount as the delta value, which will now be styled pink
+            delta=f"${highest_sales_rest['Total_Sales']:,.0f}" 
+        )
+    
+    with kpi_r2:
+        st.metric(
+            label="✨ Highest Sales Dish", 
+            value=f"{highest_sales_dish[ITEM_COL]}",
+            # Use the total sales amount as the delta value, which will now be styled pink
+            delta=f"${highest_sales_dish[SALES_COL]:,.0f}"
         )
     
     st.write("---")
@@ -413,7 +435,7 @@ def show_product_overview(df):
     st.header("Sales Performance Visualizations 📈")
     col_rest_sales, col_dish_sales = st.columns(2)
 
-    # 1. Bar Chart: Restaurant Sales (All Restaurants - Top 20)
+    # 1. Bar Chart: Restaurant Sales (Top 20)
     with col_rest_sales:
         # Heading updated as requested
         st.subheader("Sales by Restaurant")
@@ -423,12 +445,14 @@ def show_product_overview(df):
         # Sort and select top 20 for a cleaner chart
         top_n_rest_sales = restaurant_sales.sort_values('Total Sales', ascending=False).head(20)
 
+        # Increased chart height
         chart_rest = alt.Chart(top_n_rest_sales).mark_bar(color='#D70F64').encode(
             x=alt.X('Total Sales:Q', title='Total Revenue ($)'),
             y=alt.Y('Restaurant Name:N', sort='-x', title=''),
             tooltip=['Restaurant Name', alt.Tooltip('Total Sales', format='$,.0f')]
         ).properties(
-            title='' # Removed chart title as requested
+            title='', # Removed chart title as requested
+            height=450 # Increased height
         ).interactive()
         
         st.altair_chart(chart_rest, use_container_width=True)
@@ -436,58 +460,23 @@ def show_product_overview(df):
 
     # 2. Bar Chart: Top Dish Sales (Top 15 Dishes)
     with col_dish_sales:
-        st.subheader("Top 15 Dishes by Sales Revenue")
+        # Heading updated as requested
+        st.subheader("Dishes by Sales")
         dish_sales = df.groupby(ITEM_COL)[SALES_COL].sum().nlargest(15).reset_index()
         dish_sales.columns = ['Dish Name', 'Total Sales']
 
+        # Increased chart height
         chart_dish = alt.Chart(dish_sales).mark_bar(color='#FF5A93').encode(
             x=alt.X('Total Sales:Q', title='Total Revenue ($)'),
             y=alt.Y('Dish Name:N', sort='-x', title=''),
             tooltip=['Dish Name', alt.Tooltip('Total Sales', format='$,.0f')]
         ).properties(
-            title='Top 15 Dishes by Revenue'
+            title='', # Removed chart title as requested
+            height=450 # Increased height
         ).interactive()
 
         st.altair_chart(chart_dish, use_container_width=True)
         
-    st.write("---")
-
-    # --- 2. Top Sellers Section (Original Top Sellers by Quantity/Revenue) ---
-    st.header("Top Sellers (Quantity vs. Revenue)")
-    col_qty, col_rev = st.columns(2)
-
-    # 2A. Most Sold Dishes (by quantity)
-    with col_qty:
-        st.subheader("🥇 Most Sold Dishes (by Quantity)")
-        top_qty = df.groupby(ITEM_COL)[QTY_COL].sum().nlargest(10).reset_index()
-        # Updated column name
-        top_qty.columns = ['Dish Name', 'Total Quantity Sold']
-        
-        # Create Bar Chart
-        chart_qty = alt.Chart(top_qty).mark_bar(color='#D70F64').encode(
-            x=alt.X('Total Quantity Sold:Q', title='Quantity Sold'),
-            y=alt.Y('Dish Name:N', sort='-x', title=''),
-            tooltip=['Dish Name', alt.Tooltip('Total Quantity Sold', format=',')]
-        ).properties(height=350)
-        st.altair_chart(chart_qty, use_container_width=True)
-        st.dataframe(top_qty, use_container_width=True, hide_index=True)
-
-    # 2B. Most Revenue-Generating Dishes (by price × quantity)
-    with col_rev:
-        st.subheader("💰 Top Revenue-Generating Dishes")
-        top_rev = df.groupby(ITEM_COL)[SALES_COL].sum().nlargest(10).reset_index()
-        # Updated column name
-        top_rev.columns = ['Dish Name', 'Total Revenue']
-
-        # Create Bar Chart
-        chart_rev = alt.Chart(top_rev).mark_bar(color='#FF5A93').encode(
-            x=alt.X('Total Revenue:Q', title='Total Revenue ($)'),
-            y=alt.Y('Dish Name:N', sort='-x', title=''),
-            tooltip=['Dish Name', alt.Tooltip('Total Revenue', format='$,.2f')]
-        ).properties(height=350)
-        st.altair_chart(chart_rev, use_container_width=True)
-        st.dataframe(top_rev, use_container_width=True, hide_index=True)
-
     st.write("---")
 
     # --- 3. Category Insights Section ---
@@ -514,7 +503,7 @@ def show_product_overview(df):
         'Sales_Share': 'Sales Share',
     })
 
-    # Changed from 3 columns to 2 columns (removed col_rating)
+    # Used 2 columns (removed the Average Rating column)
     col_share, col_aov = st.columns(2)
 
     # 3A. Category Share of Sales (Donut Chart)
@@ -552,9 +541,6 @@ def show_product_overview(df):
         st.altair_chart(chart_aov, use_container_width=True)
 
     st.write("---")
-    
-    # Removed the empty "Restaurant Insights" header and table/dataframe here
-    # as the KPI was moved to the top and the table was removed.
 
 # -------------------------
 # Main Dashboard Function
