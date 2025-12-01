@@ -145,24 +145,18 @@ def login():
                 else:
                     st.error("Invalid username or password")
                     
-# --------------------------------------------------------------------------------
-# Data Loading and Preparation Function (Using GitHub URL)
-# --------------------------------------------------------------------------------
-# Data Source: Using the public GitHub raw file URL for reliable deployment
-GITHUB_DATA_URL = "https://raw.githubusercontent.com/NofilAhm/Streamlit_Project_PBA/main/dataset.csv" 
-
+# -------------------------
+# Data Loading and Preparation Function
+# -------------------------
 @st.cache_data
 def load_data():
-    """
-    Loads, cleans, and engineers features for the sales dashboard 
-    directly from a stable web URL to avoid file path errors.
-    """
+    """Loads, cleans, and engineers features for the sales dashboard."""
     
-    data_source = GITHUB_DATA_URL
+    # Reverting to the local path as requested by the user
+    DATA_FILE = Path(__file__).parent / "dataset" 
 
     try:
-        # Load data directly from the URL
-        df = pd.read_csv(data_source) 
+        df = pd.read_csv(DATA_FILE)
         
         # --- DATA CLEANING & FEATURE ENGINEERING ---
         DATE_COLUMNS = ['signup_date', 'order_date', 'last_order_date', 'rating_date']
@@ -189,7 +183,8 @@ def load_data():
         return df
 
     except Exception as e:
-        st.error(f"Failed to load or process data from URL. Please ensure your dataset is correctly named 'dataset.csv' and is public. Error: {e}")
+        # Simplified error message for local file failure
+        st.error(f"Failed to load or process data from '{DATA_FILE}'. Error: {e}")
         return pd.DataFrame() 
 
 # -------------------------
