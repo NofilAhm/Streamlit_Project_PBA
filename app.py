@@ -385,6 +385,28 @@ def show_product_overview(df):
         st.warning(f"Missing required columns for Product Overview: {', '.join([c for c in required_cols if c not in df.columns])}")
         return
 
+    # --- 1. Restaurant Insights Section (MOVED TO TOP) ---
+    st.header("Key Restaurant KPI")
+
+    # Aggregate Restaurant Data
+    restaurant_summary = df.groupby(RESTAURANT_COL).agg(
+        Total_Sales=(SALES_COL, 'sum'),
+    ).reset_index()
+    
+    # KPIs
+    highest_sales_rest = restaurant_summary.loc[restaurant_summary['Total_Sales'].idxmax()]
+    
+    kpi_r1 = st.columns(1)[0] 
+
+    with kpi_r1:
+        st.metric(
+            label="🏆 Highest Sales Restaurant", 
+            value=f"{highest_sales_rest[RESTAURANT_COL]}",
+            delta=f"${highest_sales_rest['Total_Sales']:,.0f}"
+        )
+    
+    st.write("---")
+
     # ----------------------------------------------------
     #  --- Sales Visualization Section (Restaurant & Dish) ---
     # ----------------------------------------------------
@@ -393,7 +415,8 @@ def show_product_overview(df):
 
     # 1. Bar Chart: Restaurant Sales (All Restaurants - Top 20)
     with col_rest_sales:
-        st.subheader("Top 20 Restaurant Sales Ranking")
+        # Heading updated as requested
+        st.subheader("Sales by Restaurant")
         restaurant_sales = df.groupby(RESTAURANT_COL)[SALES_COL].sum().reset_index()
         restaurant_sales.columns = ['Restaurant Name', 'Total Sales']
         
@@ -405,7 +428,7 @@ def show_product_overview(df):
             y=alt.Y('Restaurant Name:N', sort='-x', title=''),
             tooltip=['Restaurant Name', alt.Tooltip('Total Sales', format='$,.0f')]
         ).properties(
-            title='Top 20 Restaurants by Sales'
+            title='' # Removed chart title as requested
         ).interactive()
         
         st.altair_chart(chart_rest, use_container_width=True)
@@ -429,11 +452,11 @@ def show_product_overview(df):
         
     st.write("---")
 
-    # --- 1. Top Sellers Section (Original Top Sellers by Quantity/Revenue) ---
+    # --- 2. Top Sellers Section (Original Top Sellers by Quantity/Revenue) ---
     st.header("Top Sellers (Quantity vs. Revenue)")
     col_qty, col_rev = st.columns(2)
 
-    # 1A. Most Sold Dishes (by quantity)
+    # 2A. Most Sold Dishes (by quantity)
     with col_qty:
         st.subheader("🥇 Most Sold Dishes (by Quantity)")
         top_qty = df.groupby(ITEM_COL)[QTY_COL].sum().nlargest(10).reset_index()
@@ -449,7 +472,7 @@ def show_product_overview(df):
         st.altair_chart(chart_qty, use_container_width=True)
         st.dataframe(top_qty, use_container_width=True, hide_index=True)
 
-    # 1B. Most Revenue-Generating Dishes (by price × quantity)
+    # 2B. Most Revenue-Generating Dishes (by price × quantity)
     with col_rev:
         st.subheader("💰 Top Revenue-Generating Dishes")
         top_rev = df.groupby(ITEM_COL)[SALES_COL].sum().nlargest(10).reset_index()
@@ -467,24 +490,14 @@ def show_product_overview(df):
 
     st.write("---")
 
-    # --- 2. Category Insights Section ---
+    # --- 3. Category Insights Section ---
     st.header("Category Insights")
     
-    # Check if 'rating' column exists for Category aggregation
-    if RATING_COL in df.columns:
-        category_summary = df.groupby(CATEGORY_COL).agg(
-            Total_Sales=(SALES_COL, 'sum'),
-            Total_Orders=('order_id', 'nunique'),
-            Avg_Rating=(RATING_COL, 'mean')
-        ).reset_index()
-        category_summary['Avg_Rating'] = category_summary['Avg_Rating'].round(2)
-    else:
-        # Fallback if 'rating' is missing
-        category_summary = df.groupby(CATEGORY_COL).agg(
-            Total_Sales=(SALES_COL, 'sum'),
-            Total_Orders=('order_id', 'nunique')
-        ).reset_index()
-        category_summary['Average Rating'] = np.nan # Add NaN column to maintain structure
+    # Aggregation now excludes Avg_Rating
+    category_summary = df.groupby(CATEGORY_COL).agg(
+        Total_Sales=(SALES_COL, 'sum'),
+        Total_Orders=('order_id', 'nunique'),
+    ).reset_index()
         
     # Calculate Total Sales for Percentage
     total_sales_overall = category_summary['Total_Sales'].sum()
@@ -499,12 +512,12 @@ def show_product_overview(df):
         'Total_Sales': 'Total Sales', 
         'Total_Orders': 'Total Orders',
         'Sales_Share': 'Sales Share',
-        'Avg_Rating': 'Average Rating'
     })
 
-    col_share, col_aov, col_rating = st.columns(3)
+    # Changed from 3 columns to 2 columns (removed col_rating)
+    col_share, col_aov = st.columns(2)
 
-    # 2A. Category Share of Sales (Donut Chart)
+    # 3A. Category Share of Sales (Donut Chart)
     with col_share:
         st.subheader("📊 Category Share of Sales")
         
@@ -526,7 +539,7 @@ def show_product_overview(df):
         
         st.altair_chart(arc_share, use_container_width=True)
 
-    # 2B. Category-wise AOV (Bar Chart)
+    # 3B. Category-wise AOV (Bar Chart)
     with col_aov:
         st.subheader("💸 Category Average Order Value (AOV)")
         
@@ -538,60 +551,10 @@ def show_product_overview(df):
         
         st.altair_chart(chart_aov, use_container_width=True)
 
-    # 2C. Category-wise Ratings (Bar Chart)
-    with col_rating:
-        st.subheader("⭐ Category Average Rating")
-        
-        if 'Average Rating' in category_summary.columns and not category_summary['Average Rating'].isna().all():
-            # Determine rating scale min/max for better visualization
-            valid_ratings = category_summary['Average Rating'].dropna()
-            rating_scale_min = valid_ratings.min() * 0.9 if not valid_ratings.empty else 1
-            rating_scale_max = valid_ratings.max() * 1.1 if not valid_ratings.empty else 5
-
-            chart_rating = alt.Chart(category_summary).mark_bar(color='#FF5A93').encode(
-                x=alt.X('Average Rating:Q', title='Average Rating', scale=alt.Scale(domain=[rating_scale_min, rating_scale_max])),
-                y=alt.Y(CATEGORY_COL + ':N', sort=alt.EncodingSortField(field='Average Rating', order='descending'), title=''),
-                tooltip=[CATEGORY_COL, alt.Tooltip('Average Rating', format='.2f')]
-            ).properties(height=350)
-            
-            st.altair_chart(chart_rating, use_container_width=True)
-        else:
-             st.info("Average Rating data is not available in the dataset.")
-
-
-    st.write("---")
-
-    # --- 3. Restaurant Insights Section ---
-    st.header("Restaurant Insights")
-
-    # Aggregate Restaurant Data (SIMPLIFIED to only Total Sales to resolve KeyError)
-    restaurant_summary = df.groupby(RESTAURANT_COL).agg(
-        Total_Sales=(SALES_COL, 'sum'),
-    ).reset_index()
-    
-    # KPIs (Simplified to only Highest Sales)
-    highest_sales_rest = restaurant_summary.loc[restaurant_summary['Total_Sales'].idxmax()]
-    
-    kpi_r1 = st.columns(1)[0] # Use a single column for the single KPI
-
-    with kpi_r1:
-        st.metric(
-            label="🏆 Highest Sales Restaurant", 
-            value=f"{highest_sales_rest[RESTAURANT_COL]}",
-            delta=f"${highest_sales_rest['Total_Sales']:,.0f}"
-        )
-    
     st.write("---")
     
-    # Top 10 Restaurant Sales Table (Simplified columns)
-    st.subheader("Top 10 Restaurants by Sales (Table View)")
-    top_rest_sales = restaurant_summary.sort_values('Total_Sales', ascending=False).head(10).rename(
-        columns={'Total_Sales': 'Total Sales ($)'}
-    )
-    st.dataframe(top_rest_sales.style.format({
-        'Total Sales ($)': '$,.0f',
-    }), use_container_width=True, hide_index=True)
-
+    # Removed the empty "Restaurant Insights" header and table/dataframe here
+    # as the KPI was moved to the top and the table was removed.
 
 # -------------------------
 # Main Dashboard Function
