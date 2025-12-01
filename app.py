@@ -169,7 +169,7 @@ def load_data():
         # Ensure text columns are clean
         df['dish_name'] = df['dish_name'].astype(str).fillna('Unknown Item')
         df['category'] = df['category'].astype(str).fillna('Unknown Category')
-        df['restaurant'] = df['restaurant'].astype(str).fillna('Unknown Restaurant')
+        df['restaurant_name'] = df['restaurant'].astype(str).fillna('Unknown Restaurant')
 
         # Create sales column
         df['sales'] = df['quantity'] * df['price']
