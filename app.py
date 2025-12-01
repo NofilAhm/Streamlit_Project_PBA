@@ -167,7 +167,7 @@ def load_data():
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
         
         # Ensure text columns are clean
-        df['dish_name'] = df['dish_name'].astype(str).fillna('Unknown Item')
+        df['item_name'] = df['item_name'].astype(str).fillna('Unknown Item')
         df['category'] = df['category'].astype(str).fillna('Unknown Category')
         df['restaurant_name'] = df['restaurant_name'].astype(str).fillna('Unknown Restaurant')
 
@@ -360,7 +360,7 @@ def show_customer_overview(df):
 def show_product_overview(df):
     """Generates the content for the Product Overview tab based on provided KPIs."""
     
-    ITEM_COL = 'dish_name'
+    ITEM_COL = 'item_name'
     CATEGORY_COL = 'category'
     RESTAURANT_COL = 'restaurant_name'
     QTY_COL = 'quantity'
@@ -460,12 +460,22 @@ def show_product_overview(df):
     # --- 2. Category Insights Section ---
     st.header("Category Insights")
     
-    category_summary = df.groupby(CATEGORY_COL).agg(
-        Total_Sales=(SALES_COL, 'sum'),
-        Total_Orders=('order_id', 'nunique'),
-        Avg_Rating=(RATING_COL, 'mean')
-    ).reset_index()
-
+    # Check if 'rating' column exists for Category aggregation
+    if RATING_COL in df.columns:
+        category_summary = df.groupby(CATEGORY_COL).agg(
+            Total_Sales=(SALES_COL, 'sum'),
+            Total_Orders=('order_id', 'nunique'),
+            Avg_Rating=(RATING_COL, 'mean')
+        ).reset_index()
+        category_summary['Avg_Rating'] = category_summary['Avg_Rating'].round(2)
+    else:
+        # Fallback if 'rating' is missing
+        category_summary = df.groupby(CATEGORY_COL).agg(
+            Total_Sales=(SALES_COL, 'sum'),
+            Total_Orders=('order_id', 'nunique')
+        ).reset_index()
+        category_summary['Average Rating'] = np.nan # Add NaN column to maintain structure
+        
     # Calculate Total Sales for Percentage
     total_sales_overall = category_summary['Total_Sales'].sum()
     category_summary['Sales_Share'] = (category_summary['Total_Sales'] / total_sales_overall) 
@@ -473,7 +483,7 @@ def show_product_overview(df):
     # Calculate Category-wise AOV
     category_summary['AOV'] = category_summary['Total_Sales'] / category_summary['Total_Orders']
     category_summary['AOV'] = category_summary['AOV'].round(2)
-    category_summary['Avg_Rating'] = category_summary['Avg_Rating'].round(2)
+    
     
     category_summary = category_summary.rename(columns={
         'Total_Sales': 'Total Sales', 
@@ -522,37 +532,39 @@ def show_product_overview(df):
     with col_rating:
         st.subheader("⭐ Category Average Rating")
         
-        # Determine rating scale min/max for better visualization
-        rating_scale_min = df[RATING_COL].min() * 0.9 if RATING_COL in df.columns and not df[RATING_COL].empty else 1
-        rating_scale_max = df[RATING_COL].max() * 1.1 if RATING_COL in df.columns and not df[RATING_COL].empty else 5
+        if 'Average Rating' in category_summary.columns and not category_summary['Average Rating'].isna().all():
+            # Determine rating scale min/max for better visualization
+            valid_ratings = category_summary['Average Rating'].dropna()
+            rating_scale_min = valid_ratings.min() * 0.9 if not valid_ratings.empty else 1
+            rating_scale_max = valid_ratings.max() * 1.1 if not valid_ratings.empty else 5
 
-        chart_rating = alt.Chart(category_summary).mark_bar(color='#FF5A93').encode(
-            x=alt.X('Average Rating:Q', title='Average Rating', scale=alt.Scale(domain=[rating_scale_min, rating_scale_max])),
-            y=alt.Y(CATEGORY_COL + ':N', sort=alt.EncodingSortField(field='Average Rating', order='descending'), title=''),
-            tooltip=[CATEGORY_COL, alt.Tooltip('Average Rating', format='.2f')]
-        ).properties(height=350)
-        
-        st.altair_chart(chart_rating, use_container_width=True)
+            chart_rating = alt.Chart(category_summary).mark_bar(color='#FF5A93').encode(
+                x=alt.X('Average Rating:Q', title='Average Rating', scale=alt.Scale(domain=[rating_scale_min, rating_scale_max])),
+                y=alt.Y(CATEGORY_COL + ':N', sort=alt.EncodingSortField(field='Average Rating', order='descending'), title=''),
+                tooltip=[CATEGORY_COL, alt.Tooltip('Average Rating', format='.2f')]
+            ).properties(height=350)
+            
+            st.altair_chart(chart_rating, use_container_width=True)
+        else:
+             st.info("Average Rating data is not available in the dataset.")
+
 
     st.write("---")
 
     # --- 3. Restaurant Insights Section ---
     st.header("Restaurant Insights")
 
-    # Aggregate Restaurant Data
+    # Aggregate Restaurant Data (SIMPLIFIED to only Total Sales to resolve KeyError)
     restaurant_summary = df.groupby(RESTAURANT_COL).agg(
         Total_Sales=(SALES_COL, 'sum'),
-        Avg_Rating=(RATING_COL, 'mean'),
-        Delivery_Issues_Count=(ISSUES_COL, 'sum') 
+        # Avg_Rating=(RATING_COL, 'mean'), # Removed due to potential KeyError
+        # Delivery_Issues_Count=(ISSUES_COL, 'sum') # Removed due to potential KeyError
     ).reset_index()
-    restaurant_summary['Avg_Rating'] = restaurant_summary['Avg_Rating'].round(2)
     
-    # KPIs
+    # KPIs (Simplified to only Highest Sales)
     highest_sales_rest = restaurant_summary.loc[restaurant_summary['Total_Sales'].idxmax()]
-    highest_rating_rest = restaurant_summary.loc[restaurant_summary['Avg_Rating'].idxmax()]
-    lowest_issues_rest = restaurant_summary.loc[restaurant_summary['Delivery_Issues_Count'].idxmin()]
     
-    kpi_r1, kpi_r2, kpi_r3 = st.columns(3)
+    kpi_r1 = st.columns(1)[0] # Use a single column for the single KPI
 
     with kpi_r1:
         st.metric(
@@ -560,30 +572,16 @@ def show_product_overview(df):
             value=f"{highest_sales_rest[RESTAURANT_COL]}",
             delta=f"${highest_sales_rest['Total_Sales']:,.0f}"
         )
-    with kpi_r2:
-        st.metric(
-            label="⭐ Highest Average Rating", 
-            value=f"{highest_rating_rest[RESTAURANT_COL]}",
-            delta=f"{highest_rating_rest['Avg_Rating']:.2f} / 5.00"
-        )
-    with kpi_r3:
-        st.metric(
-            label="✅ Lowest Delivery Issues", 
-            value=f"{lowest_issues_rest[RESTAURANT_COL]}",
-            delta=f"{lowest_issues_rest['Delivery_Issues_Count']:,} Issues"
-        )
     
     st.write("---")
     
-    # Top 10 Restaurant Sales Table
+    # Top 10 Restaurant Sales Table (Simplified columns)
     st.subheader("Top 10 Restaurants by Sales (Table View)")
     top_rest_sales = restaurant_summary.sort_values('Total_Sales', ascending=False).head(10).rename(
-        columns={'Total_Sales': 'Total Sales ($)', 'Avg_Rating': 'Avg Rating', 'Delivery_Issues_Count': 'Delivery Issues'}
+        columns={'Total_Sales': 'Total Sales ($)'}
     )
     st.dataframe(top_rest_sales.style.format({
         'Total Sales ($)': '$,.0f',
-        'Avg Rating': '{:.2f}',
-        'Delivery Issues': '{:,}'
     }), use_container_width=True, hide_index=True)
 
 
