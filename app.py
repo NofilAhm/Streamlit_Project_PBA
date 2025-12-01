@@ -63,9 +63,10 @@ h1, h2, h3, h4, .stMarkdown {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* 5A. INPUT LABELS INSIDE PINK BOX: Must be WHITE for contrast */
+/* 5A. INPUT LABELS INSIDE PINK BOX: Changed to a high-contrast dark maroon tone from the palette for legibility on the deep pink background. */
 [data-testid="stHorizontalBlock"] > div:nth-child(2) .stTextInput > label {
-    color: white !important;
+    color: #6A053F !important; /* Dark Maroon for contrast on #D70F64 */
+    font-weight: bold;
 }
 
 /* 6. General Button Styling (Default) */
@@ -569,7 +570,7 @@ def main_dashboard():
         
         /* FIX OVERRIDE: Input Labels inside the white dashboard content area must be dark for visibility */
         .stApp .stTextInput > label {
-            color: #333333 !important; /* Overrides the white label color set in the global CSS */
+            color: #333333 !important; /* Overrides the dark pink label color set in the global CSS */
         }
         
         </style>
