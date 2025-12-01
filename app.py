@@ -130,8 +130,10 @@ st.markdown(FOODPANDA_THEME, unsafe_allow_html=True)
 # Hardcoded users & Session State
 # -------------------------
 USERS = {
-    "nofil": "12345",
-    "admin": "admin123"
+    "nofil": "Nofil@1993",
+    "maviya": "Maviya@1999",
+    "uzair": "Uzair@1995",
+    "admin": "Foodpand@2025"
 }
 
 if "logged_in" not in st.session_state:
