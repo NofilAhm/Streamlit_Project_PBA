@@ -166,8 +166,14 @@ def load_data():
         df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
         
+        # RENAME: Change 'item_name' to 'dish_name' as requested
+        if 'item_name' in df.columns:
+            df = df.rename(columns={'item_name': 'dish_name'})
+        
+        dish_col = 'dish_name' if 'dish_name' in df.columns else 'item_name' # Safety check if original name wasn't item_name
+
         # Ensure text columns are clean
-        df['item_name'] = df['item_name'].astype(str).fillna('Unknown Item')
+        df[dish_col] = df[dish_col].astype(str).fillna('Unknown Dish') # Use 'Unknown Dish' for missing values
         df['category'] = df['category'].astype(str).fillna('Unknown Category')
         df['restaurant_name'] = df['restaurant_name'].astype(str).fillna('Unknown Restaurant')
 
@@ -360,7 +366,8 @@ def show_customer_overview(df):
 def show_product_overview(df):
     """Generates the content for the Product Overview tab based on provided KPIs."""
     
-    ITEM_COL = 'item_name'
+    # Updated: Using 'dish_name' instead of 'item_name'
+    ITEM_COL = 'dish_name'
     CATEGORY_COL = 'category'
     RESTAURANT_COL = 'restaurant_name'
     QTY_COL = 'quantity'
@@ -374,6 +381,7 @@ def show_product_overview(df):
     # Check for required columns before proceeding
     required_cols = [ITEM_COL, CATEGORY_COL, RESTAURANT_COL, QTY_COL, SALES_COL]
     if not all(col in df.columns for col in required_cols):
+        # A specific check in case 'dish_name' is missing but 'item_name' is present (unlikely if load_data is correct)
         st.warning(f"Missing required columns for Product Overview: {', '.join([c for c in required_cols if c not in df.columns])}")
         return
 
@@ -429,13 +437,14 @@ def show_product_overview(df):
     with col_qty:
         st.subheader("🥇 Most Sold Dishes (by Quantity)")
         top_qty = df.groupby(ITEM_COL)[QTY_COL].sum().nlargest(10).reset_index()
-        top_qty.columns = ['Item Name', 'Total Quantity Sold']
+        # Updated column name
+        top_qty.columns = ['Dish Name', 'Total Quantity Sold']
         
         # Create Bar Chart
         chart_qty = alt.Chart(top_qty).mark_bar(color='#D70F64').encode(
             x=alt.X('Total Quantity Sold:Q', title='Quantity Sold'),
-            y=alt.Y('Item Name:N', sort='-x', title=''),
-            tooltip=['Item Name', alt.Tooltip('Total Quantity Sold', format=',')]
+            y=alt.Y('Dish Name:N', sort='-x', title=''),
+            tooltip=['Dish Name', alt.Tooltip('Total Quantity Sold', format=',')]
         ).properties(height=350)
         st.altair_chart(chart_qty, use_container_width=True)
         st.dataframe(top_qty, use_container_width=True, hide_index=True)
@@ -444,13 +453,14 @@ def show_product_overview(df):
     with col_rev:
         st.subheader("💰 Top Revenue-Generating Dishes")
         top_rev = df.groupby(ITEM_COL)[SALES_COL].sum().nlargest(10).reset_index()
-        top_rev.columns = ['Item Name', 'Total Revenue']
+        # Updated column name
+        top_rev.columns = ['Dish Name', 'Total Revenue']
 
         # Create Bar Chart
         chart_rev = alt.Chart(top_rev).mark_bar(color='#FF5A93').encode(
             x=alt.X('Total Revenue:Q', title='Total Revenue ($)'),
-            y=alt.Y('Item Name:N', sort='-x', title=''),
-            tooltip=['Item Name', alt.Tooltip('Total Revenue', format='$,.2f')]
+            y=alt.Y('Dish Name:N', sort='-x', title=''),
+            tooltip=['Dish Name', alt.Tooltip('Total Revenue', format='$,.2f')]
         ).properties(height=350)
         st.altair_chart(chart_rev, use_container_width=True)
         st.dataframe(top_rev, use_container_width=True, hide_index=True)
@@ -557,8 +567,6 @@ def show_product_overview(df):
     # Aggregate Restaurant Data (SIMPLIFIED to only Total Sales to resolve KeyError)
     restaurant_summary = df.groupby(RESTAURANT_COL).agg(
         Total_Sales=(SALES_COL, 'sum'),
-        # Avg_Rating=(RATING_COL, 'mean'), # Removed due to potential KeyError
-        # Delivery_Issues_Count=(ISSUES_COL, 'sum') # Removed due to potential KeyError
     ).reset_index()
     
     # KPIs (Simplified to only Highest Sales)
