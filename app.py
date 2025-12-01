@@ -20,10 +20,10 @@ st.set_page_config(layout="wide")
 # -------------------------
 FOODPANDA_THEME = """
 <style>
-/* 1. MAIN BACKGROUND: Transparent Foodpanda Pink */
+/* 1. LOGIN SCREEN BACKGROUND: Very Light Pink */
 [data-testid="stAppViewContainer"] {
-    background-color: rgba(215, 15, 100, 0.8) !important; 
-    color: #D70F64 !important; 
+    background-color: #FEE8F0 !important; /* Very Light Pink for separation */
+    color: #333333 !important; /* Dark text for contrast on light background */
 }
 
 /* 2. PUSH CONTENT DOWN (Top Space Reduction on Main Content) */
@@ -37,7 +37,7 @@ FOODPANDA_THEME = """
     margin-top: 0px !important;
 }
 
-/* 3. INPUT FIELD STYLING: FIXING READABILITY (White Box, Black Text) */
+/* 3. INPUT FIELD STYLING: (White Box, Black Text) */
 .stTextInput > div:first-child {
     background-color: white !important; 
     border-radius: 0.25rem; 
@@ -49,19 +49,26 @@ FOODPANDA_THEME = """
     border: none !important; 
 }
 
-/* 4. Ensure input labels and titles are visible */
-/* 4A. INPUT LABELS FIX: Set to WHITE for the pink LOGIN screen background */
-.stTextInput > label {
-    color: white !important;
-}
-
-/* 4B. H1, H2, H3, H4, .stMarkdown - Keep Pink for titles/headers on the login screen */
+/* 4. HEADERS & TITLES: Keep Foodpanda Pink */
 h1, h2, h3, h4, .stMarkdown {
     color: #D70F64 !important; 
 }
 
+/* 5. LOGIN CONTAINER STYLING (THE BOX) - Primary Pink */
+/* Target the container box inside the middle column for the login form */
+[data-testid="stHorizontalBlock"] > div:nth-child(2) > [data-testid="stVerticalBlock"]:nth-child(2) {
+    background-color: #D70F64 !important; /* Primary Foodpanda Pink */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
 
-/* 5. General Button Styling (Default) */
+/* 5A. INPUT LABELS INSIDE PINK BOX: Must be WHITE for contrast */
+[data-testid="stHorizontalBlock"] > div:nth-child(2) .stTextInput > label {
+    color: white !important;
+}
+
+/* 6. General Button Styling (Default) */
 .stButton > button {
     background-color: #FFFFFF;
     border: 1px solid #D70F64;
@@ -73,7 +80,7 @@ h1, h2, h3, h4, .stMarkdown {
     color: white !important; 
 }
 
-/* KPI LABEL FIX: Large, bold titles for metrics */
+/* 7. KPI LABEL FIX: Large, bold titles for metrics */
 [data-testid="stMetricLabel"] {
     font-size: 1.35rem !important; 
     font-weight: bold !important; 
@@ -85,7 +92,7 @@ h1, h2, h3, h4, .stMarkdown {
     color: #333333 !important; 
 }
 
-/* 6. METRIC DELTA FIX: Force delta color to the theme pink (removes default green/red) */
+/* 8. METRIC DELTA FIX: Force delta color to the theme pink (removes default green/red) */
 [data-testid="stMetricDelta"] svg {
     fill: #D70F64 !important; /* Forces the delta arrow color */
 }
@@ -106,9 +113,9 @@ h1, h2, h3, h4, .stMarkdown {
     color: white !important; 
 }
 
-/* Login Dashboard Title Styling (White text on pink background) */
+/* Login Dashboard Title Styling (Pink text on light background) */
 .login-title {
-    color: white !important; 
+    color: #D70F64 !important; 
     text-align: center;
     font-size: 2em;
     font-weight: bold;
@@ -140,6 +147,7 @@ def login():
     with col2:
         st.markdown("<h2 class='login-title'>FOODPANDA SALES DASHBOARD</h2>", unsafe_allow_html=True)
         
+        # This st.container is now styled with primary pink via CSS targeting
         with st.container(border=True): 
             username = st.text_input("Username", key="login_user")
             password = st.text_input("Password", type="password", key="login_pass")
@@ -549,10 +557,12 @@ def main_dashboard():
     # Reset background theme for the main dashboard content area
     st.markdown("""
         <style>
+        /* DASHBOARD CONTENT BACKGROUND: WHITE */
         [data-testid="stAppViewContainer"] {
             background-color: white !important; 
             color: #333333 !important;
         }
+        /* SIDEBAR BACKGROUND: PRIMARY PINK */
         [data-testid="stSidebar"] {
             background-color: rgba(215, 15, 100, 0.8) !important;
         }
@@ -572,7 +582,7 @@ def main_dashboard():
 
     # --- Sidebar Setup ---
     st.sidebar.title("Dashboard Menu")
-    st.sidebar.markdown(f"**Welcome, {st.session_state['username']}**")
+    st.sidebar.markdown(f"**Welcome, {st.session_session['username']}**")
     
     # Logout Button
     if st.sidebar.button("Logout", key="logout_btn"):
